@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* Immersive UI exact green/emerald color palette */
+  --color-gold-50: #ecfdf5;
+  --color-gold-100: #d1fae5;
+  --color-gold-200: #a7f3d0;
+  --color-gold-300: #6ee7b7;
+  --color-gold-400: #34d399;
+  --color-gold-500: #10b981;
+  --color-gold-600: #059669;
+  --color-gold-700: #047857;
+  --color-gold-800: #065f46;
+  --color-gold-900: #064e3b;
+  --color-gold-950: #022c22;
+
+  --color-immersive-gold: #10b981;
+  --color-immersive-gold-dark: #059669;
+  --color-immersive-bg-main: #09090b;
+  --color-immersive-bg-card: #111113;
+  --color-immersive-bg-sidebar: #0c0c0e;
+  --color-immersive-border-light: #2a2a2a;
+  --color-immersive-border-dark: #1a1a1a;
+}
+
+/* Custom Scrollbar styled for Immersive theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 3px;
+  border: 1px solid #2a2a2a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* Custom glow animations matching the Immersive style */
+@keyframes gold-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  }
+}
+
+.gold-glow {
+  animation: gold-pulse 2s infinite;
+}
+

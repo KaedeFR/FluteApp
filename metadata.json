@@ -1,0 +1,6 @@
+{
+  "name": "Gamify Your Life",
+  "description": "Transformez vos objectifs quotidiens et vos projets en une aventure RPG épique. Gagnez de l'XP, montez de niveau, gérez vos statistiques et débloquez des récompenses réelles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
