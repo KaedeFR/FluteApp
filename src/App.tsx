@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Character, Quest, Reward, Achievement, QuestType, ActiveTimer, SkillNode, EquipmentItem, JournalEntries } from './types';
+import { Character, Quest, Reward, Achievement, QuestType, ActiveTimer, SkillNode, EquipmentItem, JournalEntries, CharacterProfile, KeyboardShortcuts } from './types';
 import { GamificationEngine } from './lib/gamification';
-import { BUDDHA_QUESTS, BUDDHA_SKILLS, BUDDHA_ACHIEVEMENTS } from './data/buddhaArchetype';
+import { FLUTE_MONK_QUESTS, FLUTE_MONK_SKILLS, FLUTE_MONK_ACHIEVEMENTS } from './data/fluteMonkArchetype';
 import { CharacterSheet } from './components/CharacterSheet';
 import { QuestBoard } from './components/QuestBoard';
 import { LootShop } from './components/LootShop';
@@ -17,6 +17,7 @@ import { MainMenu } from './components/MainMenu';
 import { CharacterCreation } from './components/CharacterCreation';
 import { SettingsMenu } from './components/SettingsMenu';
 import { SetupGuide } from './components/SetupGuide';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { 
   User, 
   Calendar, 
@@ -32,7 +33,10 @@ import {
   ShieldAlert,
   Dumbbell,
   GitBranch,
-  Backpack
+  Backpack,
+  TrendingUp,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -223,6 +227,75 @@ interface Notification {
   type: 'levelup' | 'achievement' | 'purchased' | 'damage' | 'respawn';
 }
 
+const syncAllAchievements = (
+  achievementsList: Achievement[],
+  questsList: Quest[],
+  skillsList: SkillNode[],
+  onUnlockNotification?: (title: string, desc: string) => void
+): Achievement[] => {
+  return achievementsList.map(ach => {
+    if (ach.unlocked) return ach;
+
+    let isCompleted = false;
+
+    // 1. Check milestone-based achievements
+    for (const q of questsList) {
+      if (q.milestones) {
+        const matchingMs = q.milestones.find(m => 
+          m.title.toLowerCase().startsWith(ach.title.toLowerCase()) ||
+          m.title.toLowerCase().includes(ach.title.toLowerCase())
+        );
+        if (matchingMs && matchingMs.completed) {
+          isCompleted = true;
+          break;
+        }
+      }
+    }
+
+    // 2. Check skill-level based achievements (for physical feats)
+    if (!isCompleted) {
+      const tractionSkill = skillsList.find(s => s.id === 's-fm-traction');
+      const dipsSkill = skillsList.find(s => s.id === 's-fm-dips');
+      const benchSkill = skillsList.find(s => s.id === 's-fm-benchpress');
+      const deadliftSkill = skillsList.find(s => s.id === 's-fm-deadlift');
+
+      if (ach.id === 'a-fm-strength-pullup-10' && tractionSkill && tractionSkill.level >= 2) isCompleted = true;
+      if (ach.id === 'a-fm-strength-pullup-20' && tractionSkill && tractionSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-pullup-30' && tractionSkill && tractionSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-pullup-40' && tractionSkill && tractionSkill.level >= 5) isCompleted = true;
+
+      if (ach.id === 'a-fm-strength-dip-35' && dipsSkill && dipsSkill.level >= 3) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dip-50' && dipsSkill && dipsSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dip-65' && dipsSkill && dipsSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dip-80' && dipsSkill && dipsSkill.level >= 5) isCompleted = true;
+
+      if (ach.id === 'a-fm-strength-bench-100' && benchSkill && benchSkill.level >= 2) isCompleted = true;
+      if (ach.id === 'a-fm-strength-bench-120' && benchSkill && benchSkill.level >= 3) isCompleted = true;
+      if (ach.id === 'a-fm-strength-bench-140' && benchSkill && benchSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-bench-160' && benchSkill && benchSkill.level >= 5) isCompleted = true;
+
+      if (ach.id === 'a-fm-strength-dead-125' && deadliftSkill && deadliftSkill.level >= 2) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dead-150' && deadliftSkill && deadliftSkill.level >= 3) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dead-175' && deadliftSkill && deadliftSkill.level >= 4) isCompleted = true;
+      if (ach.id === 'a-fm-strength-dead-200' && deadliftSkill && deadliftSkill.level >= 5) isCompleted = true;
+    }
+
+    if (isCompleted) {
+      if (onUnlockNotification) {
+        onUnlockNotification(ach.title, ach.description);
+      }
+      return {
+        ...ach,
+        progress: ach.target,
+        unlocked: true,
+        unlockedAt: new Date().toISOString()
+      };
+    }
+
+    return ach;
+  });
+};
+
 // Retroactive loop that calculates correct skill levels and stat bonuses
 const applyRetroactiveSkillsSync = (
   qList: Quest[],
@@ -233,13 +306,46 @@ const applyRetroactiveSkillsSync = (
   const updatedCharacter = { ...char, stats: { ...char.stats } };
 
   const updatedSkills = sList.map(skill => {
-    // Count how many completed quests are linked to this skill
+    // Count how many completed quests are linked to this skill (validation / one-time quests)
     const completedQuestsCount = qList.filter(
-      q => q.completed && q.skillIdToUnlock === skill.id
+      q => q.completed && q.skillIdToUnlock === skill.id && q.type !== 'daily'
     ).length;
 
-    // Target level is the minimum of completed quests count and maxLevel
-    const targetLevel = Math.min(skill.maxLevel, completedQuestsCount);
+    // Check if there are any associated daily quests
+    const linkedDailies = qList.filter(
+      q => q.type === 'daily' && q.skillIdToUnlock === skill.id
+    );
+    const hasLinkedDaily = linkedDailies.length > 0;
+
+    let targetLevel = 0;
+
+    if (hasLinkedDaily) {
+      // For daily-linked skills, level is directly mapped to the streak / completion
+      let maxStreak = 0;
+      let anyCompleted = false;
+      linkedDailies.forEach(q => {
+        if (q.streak > maxStreak) maxStreak = q.streak;
+        if (q.completed) anyCompleted = true;
+      });
+
+      // Daily streak tiers:
+      // - level 1: streak >= 1 OR currently completed today
+      // - level 2: streak >= 5
+      // - level 3: streak >= 15
+      // - level 4: streak >= 30
+      // - level 5: streak >= 60
+      if (maxStreak >= 60) targetLevel = 5;
+      else if (maxStreak >= 30) targetLevel = 4;
+      else if (maxStreak >= 15) targetLevel = 3;
+      else if (maxStreak >= 5) targetLevel = 2;
+      else if (maxStreak >= 1 || anyCompleted) targetLevel = 1;
+      else targetLevel = 0;
+    } else {
+      // For standard skills, level is simply the completed count of its validation quests
+      targetLevel = completedQuestsCount;
+    }
+
+    targetLevel = Math.min(skill.maxLevel, targetLevel);
 
     if (skill.level !== targetLevel || (targetLevel > 0 && !skill.unlocked)) {
       changed = true;
@@ -266,6 +372,10 @@ export default function App() {
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [hasExistingCharacter, setHasExistingCharacter] = useState(false);
   
+  // Multiple characters profiles state
+  const [profiles, setProfiles] = useState<CharacterProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  
   // Core state loaded from LocalStorage
   const [character, setCharacter] = useState<Character>(DEFAULT_CHARACTER);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -275,7 +385,26 @@ export default function App() {
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntries>({});
-  const [activeTab, setActiveTab] = useState<'character' | 'quests' | 'skills' | 'inventory' | 'shop' | 'grimoire'>('quests');
+  const [activeTab, setActiveTab] = useState<'character' | 'quests' | 'skills' | 'inventory' | 'shop' | 'grimoire' | 'analytics'>('quests');
+  
+  // Custom Keyboard Shortcuts & Windows Background States
+  const [shortcuts, setShortcuts] = useState<KeyboardShortcuts>({
+    navCharacter: 'c',
+    navQuests: 'q',
+    navSkills: 's',
+    navInventory: 'i',
+    navShop: 'b',
+    navGrimoire: 'g',
+    navAnalytics: 'a',
+    toggleSound: 'm',
+  });
+  const [windowsBackgroundEnabled, setWindowsBackgroundEnabled] = useState(false);
+  
+  // App locked/unlocked mode state
+  const [appModeLocked, setAppModeLocked] = useState<boolean>(() => {
+    const cached = localStorage.getItem('rpg_app_mode_locked');
+    return cached !== null ? cached === 'true' : true; // Default to locked mode
+  });
   
   // Stats history for achievements
   const [history, setHistory] = useState({
@@ -342,6 +471,55 @@ export default function App() {
     return () => clearInterval(timerInterval);
   }, []);
 
+  // Global Keyboard Shortcuts Event Listener
+  useEffect(() => {
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      // Ignore if user is writing in a text input, textarea, or contenteditable
+      const activeEl = document.activeElement;
+      if (activeEl) {
+        const tagName = activeEl.tagName.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || activeEl.hasAttribute('contenteditable')) {
+          return;
+        }
+      }
+
+      const key = e.key.toLowerCase();
+
+      if (key === shortcuts.navCharacter) {
+        e.preventDefault();
+        setActiveTab('character');
+      } else if (key === shortcuts.navQuests) {
+        e.preventDefault();
+        setActiveTab('quests');
+      } else if (key === shortcuts.navSkills) {
+        e.preventDefault();
+        setActiveTab('skills');
+      } else if (key === shortcuts.navInventory) {
+        e.preventDefault();
+        setActiveTab('inventory');
+      } else if (key === shortcuts.navShop) {
+        e.preventDefault();
+        setActiveTab('shop');
+      } else if (key === shortcuts.navGrimoire) {
+        e.preventDefault();
+        setActiveTab('grimoire');
+      } else if (key === shortcuts.navAnalytics) {
+        e.preventDefault();
+        setActiveTab('analytics');
+      } else if (key === shortcuts.toggleSound) {
+        e.preventDefault();
+        setSoundEnabled(prev => {
+          const newVal = !prev;
+          localStorage.setItem('rpg_sound_enabled', newVal.toString());
+          return newVal;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [shortcuts]);
+
   const formatUptime = (sec: number) => {
     const h = Math.floor(sec / 3600).toString().padStart(2, '0');
     const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
@@ -351,65 +529,134 @@ export default function App() {
 
   // Initial Load & Seeding
   useEffect(() => {
-    const cachedChar = localStorage.getItem('rpg_character');
-    
-    if (cachedChar) {
-      setHasExistingCharacter(true);
-    }
-
-    const cachedQuests = localStorage.getItem('rpg_quests');
-    const cachedRewards = localStorage.getItem('rpg_rewards');
-    const cachedAchievements = localStorage.getItem('rpg_achievements');
-    const cachedHistory = localStorage.getItem('rpg_history');
-    const cachedSkills = localStorage.getItem('rpg_skills');
-    const cachedTimers = localStorage.getItem('rpg_timers');
-    const cachedEquipment = localStorage.getItem('rpg_equipment');
-    const cachedJournal = localStorage.getItem('rpg_journal_entries');
     const cachedSound = localStorage.getItem('rpg_sound_enabled');
     const cachedNotifs = localStorage.getItem('rpg_notifs_enabled');
+    const cachedShortcuts = localStorage.getItem('rpg_shortcuts');
+    const cachedWinBg = localStorage.getItem('rpg_windows_background');
 
     if (cachedSound !== null) setSoundEnabled(cachedSound === 'true');
     if (cachedNotifs !== null) setNotificationsEnabled(cachedNotifs === 'true');
+    if (cachedShortcuts !== null) {
+      try {
+        setShortcuts(JSON.parse(cachedShortcuts));
+      } catch (e) {
+        console.error("Failed to parse shortcuts", e);
+      }
+    }
+    if (cachedWinBg !== null) setWindowsBackgroundEnabled(cachedWinBg === 'true');
 
-    let loadedChar = cachedChar ? JSON.parse(cachedChar) : DEFAULT_CHARACTER;
-    let loadedQuests = cachedQuests ? JSON.parse(cachedQuests) : DEFAULT_QUESTS;
-    let loadedRewards = cachedRewards ? JSON.parse(cachedRewards) : GamificationEngine.getDefaultRewards();
-    let loadedAchievements = cachedAchievements ? JSON.parse(cachedAchievements) : GamificationEngine.getDefaultAchievements();
-    let loadedHistory = cachedHistory ? JSON.parse(cachedHistory) : { questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: 40 };
-    let loadedSkills = cachedSkills ? JSON.parse(cachedSkills) : DEFAULT_SKILLS;
-    let loadedEquipment = cachedEquipment ? JSON.parse(cachedEquipment) : GamificationEngine.getDefaultEquipment();
-    let loadedTimers = cachedTimers ? JSON.parse(cachedTimers) : [];
+    // 1. Load profiles list
+    const cachedProfilesStr = localStorage.getItem('rpg_profiles');
+    let loadedProfiles: CharacterProfile[] = [];
+    
+    if (cachedProfilesStr) {
+      try {
+        loadedProfiles = JSON.parse(cachedProfilesStr);
+      } catch (e) {
+        console.error("Failed to parse profiles", e);
+      }
+    }
 
-    // Run retroactive sync loop on initial load to maintain data consistency
-    const { updatedSkills, updatedCharacter, changed } = applyRetroactiveSkillsSync(
-      loadedQuests,
-      loadedSkills,
-      loadedChar
-    );
+    const cachedChar = localStorage.getItem('rpg_character');
+    
+    // Backward compatibility conversion:
+    if (loadedProfiles.length === 0 && cachedChar) {
+      try {
+        const cachedQuests = localStorage.getItem('rpg_quests');
+        const cachedRewards = localStorage.getItem('rpg_rewards');
+        const cachedAchievements = localStorage.getItem('rpg_achievements');
+        const cachedHistory = localStorage.getItem('rpg_history');
+        const cachedSkills = localStorage.getItem('rpg_skills');
+        const cachedTimers = localStorage.getItem('rpg_timers');
+        const cachedEquipment = localStorage.getItem('rpg_equipment');
+        const cachedJournal = localStorage.getItem('rpg_journal_entries');
 
-    const finalChar = changed ? updatedCharacter : loadedChar;
-    const finalSkills = changed ? updatedSkills : loadedSkills;
+        let loadedChar = JSON.parse(cachedChar);
+        let loadedQuests = cachedQuests ? JSON.parse(cachedQuests) : DEFAULT_QUESTS;
+        let loadedRewards = cachedRewards ? JSON.parse(cachedRewards) : GamificationEngine.getDefaultRewards();
+        let loadedAchievements = cachedAchievements ? JSON.parse(cachedAchievements) : GamificationEngine.getDefaultAchievements();
+        let loadedHistory = cachedHistory ? JSON.parse(cachedHistory) : { questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: 40 };
+        let loadedSkills = cachedSkills ? JSON.parse(cachedSkills) : DEFAULT_SKILLS;
+        let loadedEquipment = cachedEquipment ? JSON.parse(cachedEquipment) : GamificationEngine.getDefaultEquipment();
+        if (!loadedEquipment || loadedEquipment.length === 0) {
+          loadedEquipment = GamificationEngine.getDefaultEquipment();
+        }
+        let loadedTimers = cachedTimers ? JSON.parse(cachedTimers) : [];
+        const loadedJournal = cachedJournal ? JSON.parse(cachedJournal) : {};
 
-    setCharacter(finalChar);
-    setQuests(loadedQuests);
-    setRewards(loadedRewards);
-    setAchievements(loadedAchievements);
-    setHistory(loadedHistory);
-    setSkills(finalSkills);
-    setEquipment(loadedEquipment);
-    setActiveTimers(loadedTimers);
-    const loadedJournal = cachedJournal ? JSON.parse(cachedJournal) : {};
-    setJournalEntries(loadedJournal);
+        // Run retroactive sync loop on initial load to maintain data consistency
+        const { updatedSkills, updatedCharacter } = applyRetroactiveSkillsSync(
+          loadedQuests,
+          loadedSkills,
+          loadedChar
+        );
 
-    localStorage.setItem('rpg_character', JSON.stringify(finalChar));
-    localStorage.setItem('rpg_quests', JSON.stringify(loadedQuests));
-    localStorage.setItem('rpg_rewards', JSON.stringify(loadedRewards));
-    localStorage.setItem('rpg_achievements', JSON.stringify(loadedAchievements));
-    localStorage.setItem('rpg_history', JSON.stringify(loadedHistory));
-    localStorage.setItem('rpg_skills', JSON.stringify(finalSkills));
-    localStorage.setItem('rpg_equipment', JSON.stringify(loadedEquipment));
-    localStorage.setItem('rpg_timers', JSON.stringify(loadedTimers));
-    localStorage.setItem('rpg_journal_entries', JSON.stringify(loadedJournal));
+        const legacyProfile: CharacterProfile = {
+          id: 'legacy-profile',
+          createdAt: Date.now(),
+          lastActiveAt: Date.now(),
+          character: updatedCharacter,
+          quests: loadedQuests,
+          rewards: loadedRewards,
+          achievements: loadedAchievements,
+          skills: updatedSkills,
+          equipment: loadedEquipment,
+          activeTimers: loadedTimers,
+          journalEntries: loadedJournal,
+          history: loadedHistory
+        };
+
+        loadedProfiles = [legacyProfile];
+        localStorage.setItem('rpg_profiles', JSON.stringify(loadedProfiles));
+        localStorage.setItem('rpg_active_profile_id', 'legacy-profile');
+      } catch (e) {
+        console.error("Failed to parse legacy character", e);
+      }
+    }
+
+    setProfiles(loadedProfiles);
+
+    // 2. Select active profile ID
+    let activeId = localStorage.getItem('rpg_active_profile_id');
+    if (!activeId && loadedProfiles.length > 0) {
+      loadedProfiles.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+      activeId = loadedProfiles[0].id;
+      localStorage.setItem('rpg_active_profile_id', activeId);
+    }
+
+    if (activeId) {
+      const activeProf = loadedProfiles.find(p => p.id === activeId);
+      if (activeProf) {
+        setActiveProfileId(activeId);
+        setHasExistingCharacter(true);
+
+        // Load states
+        setCharacter(activeProf.character);
+        setQuests(activeProf.quests);
+        setRewards(activeProf.rewards);
+        setAchievements(activeProf.achievements);
+        setHistory(activeProf.history);
+        setSkills(activeProf.skills);
+        setEquipment(activeProf.equipment);
+        setActiveTimers(activeProf.activeTimers);
+        setJournalEntries(activeProf.journalEntries);
+
+        // Update active profile single keys for safety
+        localStorage.setItem('rpg_character', JSON.stringify(activeProf.character));
+        localStorage.setItem('rpg_quests', JSON.stringify(activeProf.quests));
+        localStorage.setItem('rpg_rewards', JSON.stringify(activeProf.rewards));
+        localStorage.setItem('rpg_achievements', JSON.stringify(activeProf.achievements));
+        localStorage.setItem('rpg_history', JSON.stringify(activeProf.history));
+        localStorage.setItem('rpg_skills', JSON.stringify(activeProf.skills));
+        localStorage.setItem('rpg_equipment', JSON.stringify(activeProf.equipment));
+        localStorage.setItem('rpg_timers', JSON.stringify(activeProf.activeTimers));
+        localStorage.setItem('rpg_journal_entries', JSON.stringify(activeProf.journalEntries));
+      } else {
+        setHasExistingCharacter(false);
+      }
+    } else {
+      setHasExistingCharacter(false);
+    }
   }, []);
 
   // Sync state helpers
@@ -422,7 +669,8 @@ export default function App() {
     skillsList: SkillNode[] = skills,
     timersList: ActiveTimer[] = activeTimers,
     eqList: EquipmentItem[] = equipment,
-    journalList: JournalEntries = journalEntries
+    journalList: JournalEntries = journalEntries,
+    overrideProfileId?: string
   ) => {
     // Run retroactive sync loop on every state save
     const { updatedSkills, updatedCharacter, changed } = applyRetroactiveSkillsSync(
@@ -431,9 +679,37 @@ export default function App() {
       char
     );
 
+    let finalQuests = [...qList];
+
+    const finalChar = changed ? updatedCharacter : char;
+    const finalSkills = changed ? updatedSkills : skillsList;
+
+    // Sync all milestone and physical achievements
+    let updatedAchievements = syncAllAchievements(
+      achList,
+      finalQuests,
+      finalSkills,
+      (title, desc) => {
+        triggerNotification('HAUT FAIT DÉBLOQUÉ !', `${title} : ${desc}`, 'achievement');
+      }
+    );
+
+    // Evaluate standard/custom progress conditions (quests_completed, gold_earned, level_reached, etc.)
+    const checked = GamificationEngine.checkAchievements(
+      updatedAchievements,
+      finalChar,
+      hist
+    );
+    if (checked.newUnlocks.length > 0) {
+      checked.newUnlocks.forEach(ach => {
+        triggerNotification('HAUT FAIT DÉBLOQUÉ !', `${ach.title} : ${ach.description}`, 'achievement');
+      });
+    }
+    updatedAchievements = checked.updatedAchievements;
+
     // If retroactive sync triggered changes, display premium level-up / unlock notification
     if (changed) {
-      updatedSkills.forEach((newS) => {
+      finalSkills.forEach((newS) => {
         const oldS = skillsList.find(s => s.id === newS.id);
         const oldLevel = oldS ? oldS.level : 0;
         if (newS.level > oldLevel) {
@@ -446,28 +722,79 @@ export default function App() {
       });
     }
 
-    const finalChar = changed ? updatedCharacter : char;
-    const finalSkills = changed ? updatedSkills : skillsList;
-
     setCharacter(finalChar);
-    setQuests(qList);
+    setQuests(finalQuests);
     setRewards(rList);
-    setAchievements(achList);
+    setAchievements(updatedAchievements);
     setHistory(hist);
     setSkills(finalSkills);
     setActiveTimers(timersList);
     setEquipment(eqList);
     setJournalEntries(journalList);
 
+    // Legacy keys for safety
     localStorage.setItem('rpg_character', JSON.stringify(finalChar));
-    localStorage.setItem('rpg_quests', JSON.stringify(qList));
+    localStorage.setItem('rpg_quests', JSON.stringify(finalQuests));
     localStorage.setItem('rpg_rewards', JSON.stringify(rList));
-    localStorage.setItem('rpg_achievements', JSON.stringify(achList));
+    localStorage.setItem('rpg_achievements', JSON.stringify(updatedAchievements));
     localStorage.setItem('rpg_history', JSON.stringify(hist));
     localStorage.setItem('rpg_skills', JSON.stringify(finalSkills));
     localStorage.setItem('rpg_timers', JSON.stringify(timersList));
     localStorage.setItem('rpg_equipment', JSON.stringify(eqList));
     localStorage.setItem('rpg_journal_entries', JSON.stringify(journalList));
+
+    // Save profile inside multi-character selector
+    let currentProfileId = overrideProfileId || activeProfileId;
+    if (!currentProfileId) {
+      currentProfileId = 'profile-' + Date.now();
+      setActiveProfileId(currentProfileId);
+      localStorage.setItem('rpg_active_profile_id', currentProfileId);
+    }
+
+    setProfiles(prevProfiles => {
+      const updatedProfiles = prevProfiles.map(p => {
+        if (p.id === currentProfileId) {
+          return {
+            ...p,
+            lastActiveAt: Date.now(),
+            character: finalChar,
+            quests: finalQuests,
+            rewards: rList,
+            achievements: updatedAchievements,
+            skills: finalSkills,
+            equipment: eqList,
+            activeTimers: timersList,
+            journalEntries: journalList,
+            history: hist
+          };
+        }
+        return p;
+      });
+
+      const exists = updatedProfiles.some(p => p.id === currentProfileId);
+      if (!exists) {
+        const newProfile: CharacterProfile = {
+          id: currentProfileId!,
+          createdAt: Date.now(),
+          lastActiveAt: Date.now(),
+          character: finalChar,
+          quests: finalQuests,
+          rewards: rList,
+          achievements: updatedAchievements,
+          skills: finalSkills,
+          equipment: eqList,
+          activeTimers: timersList,
+          journalEntries: journalList,
+          history: hist
+        };
+        const finalProfiles = [...updatedProfiles, newProfile];
+        localStorage.setItem('rpg_profiles', JSON.stringify(finalProfiles));
+        return finalProfiles;
+      }
+
+      localStorage.setItem('rpg_profiles', JSON.stringify(updatedProfiles));
+      return updatedProfiles;
+    });
   };
 
   // Notification trigger
@@ -599,6 +926,27 @@ export default function App() {
   const handleDeleteQuest = (questId: string) => {
     const updatedQuests = quests.filter(q => q.id !== questId);
     saveState(character, updatedQuests, rewards, achievements, history);
+  };
+
+  const handleAddAchievement = (newAch: Achievement) => {
+    const updatedAchievements = [...achievements, newAch];
+    saveState(character, quests, rewards, updatedAchievements, history);
+  };
+
+  const handleDeleteAchievement = (achId: string) => {
+    const updatedAchievements = achievements.filter(a => a.id !== achId);
+    saveState(character, quests, rewards, updatedAchievements, history);
+  };
+
+  const handleUpdateQuestStreak = (questId: string, streak: number) => {
+    const updatedQuests = quests.map(q => {
+      if (q.id === questId) {
+        return { ...q, streak };
+      }
+      return q;
+    });
+    saveState(character, updatedQuests, rewards, achievements, history);
+    triggerNotification('Série mise à jour !', `La série de la quête quotidienne a été mise à jour à ${streak} jour(s).`, 'purchased');
   };
 
   const handleToggleMilestone = (questId: string, milestoneId: string) => {
@@ -776,10 +1124,43 @@ export default function App() {
     triggerNotification('Compétence Supprimée 🗑️', 'Cette compétence a été retirée de votre arbre.', 'damage');
   };
 
-  const handleAddSkill = (newSkill: SkillNode) => {
+  const handleAddSkill = (newSkill: SkillNode, createDailyQuest?: boolean) => {
     const updatedSkills = [...skills, newSkill];
-    saveState(character, quests, rewards, achievements, history, updatedSkills, activeTimers);
-    triggerNotification('Compétence Forgée ! 🎨', `La compétence "${newSkill.title}" a été ajoutée à votre arbre de compétences !`, 'purchased');
+    let updatedQuests = [...quests];
+
+    if (createDailyQuest) {
+      const dailyQuest: Quest = {
+        id: `quest-daily-${newSkill.id}-${Date.now()}`,
+        title: `Discipline : ${newSkill.title}`,
+        description: `Pratiquer quotidiennement la compétence : ${newSkill.title}. (${newSkill.description})`,
+        type: 'daily',
+        difficulty: 'medium',
+        category: newSkill.category,
+        completed: false,
+        streak: 0,
+        frequency: 'daily',
+        isMain: false,
+        createdAt: new Date().toISOString(),
+        skillIdToUnlock: newSkill.id,
+      };
+      updatedQuests = [dailyQuest, ...updatedQuests];
+    }
+
+    saveState(character, updatedQuests, rewards, achievements, history, updatedSkills, activeTimers);
+    
+    if (createDailyQuest) {
+      triggerNotification(
+        'COMPÉTENCE & QUÊTE FORGÉES ! 🎨',
+        `La compétence "${newSkill.title}" et sa discipline quotidienne ont été ajoutées !`,
+        'purchased'
+      );
+    } else {
+      triggerNotification(
+        'Compétence Forgée ! 🎨',
+        `La compétence "${newSkill.title}" a été ajoutée à votre arbre de compétences !`,
+        'purchased'
+      );
+    }
   };
 
   const handleUpdateCharacter = (updated: Character) => {
@@ -861,6 +1242,8 @@ export default function App() {
             onDeleteQuest={handleDeleteQuest}
             onToggleMilestone={handleToggleMilestone}
             onForceResetDailies={handleForceResetDailies}
+            onUpdateQuestStreak={handleUpdateQuestStreak}
+            isAppLocked={appModeLocked}
           />
         );
       case 'skills':
@@ -872,6 +1255,7 @@ export default function App() {
             onUpgradeSkill={handleUpgradeSkill}
             onAddSkill={handleAddSkill}
             onDeleteSkill={handleDeleteSkill}
+            isAppLocked={appModeLocked}
           />
         );
       case 'inventory':
@@ -907,6 +1291,21 @@ export default function App() {
             quests={quests}
             journalEntries={journalEntries}
             onSaveJournalEntry={handleSaveJournalEntry}
+            isAppLocked={appModeLocked}
+            onAddAchievement={handleAddAchievement}
+            onDeleteAchievement={handleDeleteAchievement}
+          />
+        );
+      case 'analytics':
+        return (
+          <AnalyticsDashboard
+            character={character}
+            quests={quests}
+            skills={skills}
+            equipment={equipment}
+            questsCompletedCount={history.questsCompletedCount}
+            dailiesCompletedCount={history.dailiesCompletedCount}
+            totalGoldEarned={history.totalGoldEarned}
           />
         );
     }
@@ -926,21 +1325,26 @@ export default function App() {
       alchemist: '🧪',
       noble: '👑',
       monk: '🧘',
+      flutist_monk: '🪈',
       companion: '🐱'
     };
     return avatars[id] || '⚔️';
   };
 
   const handleCreateComplete = (newChar: Character, shouldShowGuide: boolean, archetypeId?: string) => {
+    const newProfileId = 'profile-' + Date.now();
+    setActiveProfileId(newProfileId);
+    localStorage.setItem('rpg_active_profile_id', newProfileId);
+
     setCharacter(newChar);
     setHistory({ questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: newChar.gold });
     
     let initialQuests = [] as Quest[];
     let initialSkills = [] as SkillNode[];
 
-    if (archetypeId === 'buddha_project') {
-      initialQuests = BUDDHA_QUESTS;
-      initialSkills = BUDDHA_SKILLS;
+    if (archetypeId === 'flute_monk') {
+      initialQuests = FLUTE_MONK_QUESTS;
+      initialSkills = FLUTE_MONK_SKILLS;
     } else if (archetypeId) {
       initialQuests = DEFAULT_QUESTS;
       initialSkills = DEFAULT_SKILLS;
@@ -949,20 +1353,120 @@ export default function App() {
     setQuests(initialQuests);
     setSkills(initialSkills);
     
-    setEquipment([]);
+    const initialEquipment = GamificationEngine.getDefaultEquipment();
+    setEquipment(initialEquipment);
     setActiveTimers([]);
     setJournalEntries({});
     
-    const initialAchievements = archetypeId === 'buddha_project' ? BUDDHA_ACHIEVEMENTS : GamificationEngine.getDefaultAchievements();
+    const initialAchievements = archetypeId === 'flute_monk'
+      ? FLUTE_MONK_ACHIEVEMENTS
+      : GamificationEngine.getDefaultAchievements();
     setAchievements(initialAchievements);
     
     const initialRewards = GamificationEngine.getDefaultRewards();
     setRewards(initialRewards);
     
-    saveState(newChar, initialQuests, initialRewards, initialAchievements, { questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: newChar.gold }, initialSkills, [], [], {});
+    saveState(newChar, initialQuests, initialRewards, initialAchievements, { questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: newChar.gold }, initialSkills, [], initialEquipment, {}, newProfileId);
     setHasExistingCharacter(true);
     setAppState('game');
     if (shouldShowGuide) setShowSetupGuide(true);
+  };
+
+  const handleSelectProfile = (profileId: string) => {
+    const prof = profiles.find(p => p.id === profileId);
+    if (!prof) return;
+
+    setActiveProfileId(profileId);
+    localStorage.setItem('rpg_active_profile_id', profileId);
+    setHasExistingCharacter(true);
+
+    setCharacter(prof.character);
+    setQuests(prof.quests);
+    setRewards(prof.rewards);
+    setAchievements(prof.achievements);
+    setHistory(prof.history);
+    setSkills(prof.skills);
+    setEquipment(prof.equipment);
+    setActiveTimers(prof.activeTimers);
+    setJournalEntries(prof.journalEntries);
+
+    // Save active profile single keys for safety
+    localStorage.setItem('rpg_character', JSON.stringify(prof.character));
+    localStorage.setItem('rpg_quests', JSON.stringify(prof.quests));
+    localStorage.setItem('rpg_rewards', JSON.stringify(prof.rewards));
+    localStorage.setItem('rpg_achievements', JSON.stringify(prof.achievements));
+    localStorage.setItem('rpg_history', JSON.stringify(prof.history));
+    localStorage.setItem('rpg_skills', JSON.stringify(prof.skills));
+    localStorage.setItem('rpg_equipment', JSON.stringify(prof.equipment));
+    localStorage.setItem('rpg_timers', JSON.stringify(prof.activeTimers));
+    localStorage.setItem('rpg_journal_entries', JSON.stringify(prof.journalEntries));
+
+    setAppState('game');
+  };
+
+  const handleDeleteProfile = (profileId: string) => {
+    const updatedProfiles = profiles.filter(p => p.id !== profileId);
+    setProfiles(updatedProfiles);
+    localStorage.setItem('rpg_profiles', JSON.stringify(updatedProfiles));
+
+    if (activeProfileId === profileId) {
+      setActiveProfileId(null);
+      localStorage.removeItem('rpg_active_profile_id');
+      setHasExistingCharacter(updatedProfiles.length > 0);
+
+      localStorage.removeItem('rpg_character');
+      localStorage.removeItem('rpg_quests');
+      localStorage.removeItem('rpg_rewards');
+      localStorage.removeItem('rpg_achievements');
+      localStorage.removeItem('rpg_history');
+      localStorage.removeItem('rpg_skills');
+      localStorage.removeItem('rpg_equipment');
+      localStorage.removeItem('rpg_timers');
+      localStorage.removeItem('rpg_journal_entries');
+
+      setCharacter(DEFAULT_CHARACTER);
+      setQuests([]);
+      setRewards([]);
+      setAchievements([]);
+      setHistory({ questsCompletedCount: 0, dailiesCompletedCount: 0, totalGoldEarned: 40 });
+      setSkills([]);
+      setEquipment([]);
+      setActiveTimers([]);
+      setJournalEntries({});
+    } else {
+      setHasExistingCharacter(updatedProfiles.length > 0);
+    }
+  };
+
+  const handleUpdateShortcut = (actionKey: keyof KeyboardShortcuts, newKey: string) => {
+    setShortcuts(prev => {
+      const updated = { ...prev, [actionKey]: newKey };
+      localStorage.setItem('rpg_shortcuts', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleResetShortcuts = () => {
+    const defaultShortcuts: KeyboardShortcuts = {
+      navCharacter: 'c',
+      navQuests: 'q',
+      navSkills: 's',
+      navInventory: 'i',
+      navShop: 'b',
+      navGrimoire: 'g',
+      navAnalytics: 'a',
+      toggleSound: 'm',
+    };
+    setShortcuts(defaultShortcuts);
+    localStorage.setItem('rpg_shortcuts', JSON.stringify(defaultShortcuts));
+  };
+
+  const handleToggleWindowsBackground = () => {
+    setWindowsBackgroundEnabled(prev => {
+      const newVal = !prev;
+      localStorage.setItem('rpg_windows_background', newVal.toString());
+      return newVal;
+    });
   };
 
   const toggleSound = () => {
@@ -984,6 +1488,10 @@ export default function App() {
         onContinue={() => setAppState('game')}
         onNewGame={() => setAppState('character-creation')}
         onSettings={() => setAppState('settings')}
+        profiles={profiles}
+        activeProfileId={activeProfileId}
+        onSelectProfile={handleSelectProfile}
+        onDeleteProfile={handleDeleteProfile}
       />
     );
   }
@@ -1005,6 +1513,11 @@ export default function App() {
         notificationsEnabled={notificationsEnabled}
         onToggleNotifications={toggleNotifs}
         onBack={() => setAppState('menu')}
+        shortcuts={shortcuts}
+        onUpdateShortcut={handleUpdateShortcut}
+        onResetShortcuts={handleResetShortcuts}
+        windowsBackgroundEnabled={windowsBackgroundEnabled}
+        onToggleWindowsBackground={handleToggleWindowsBackground}
       />
     );
   }
@@ -1058,7 +1571,32 @@ export default function App() {
               <p className="text-[10px] uppercase text-[#64748b]">Uptime</p>
               <p className="text-sm font-mono tracking-tighter text-slate-300">{formatUptime(secondsElapsed)}</p>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
+              {/* Lock/Unlock App Mode Padlock */}
+              <button
+                id="toggle-app-lock-btn"
+                onClick={() => {
+                  const newLocked = !appModeLocked;
+                  setAppModeLocked(newLocked);
+                  localStorage.setItem('rpg_app_mode_locked', newLocked.toString());
+                  triggerNotification(
+                    newLocked ? 'MODE VERROUILLÉ 🔒' : 'MODE DÉVERROUILLÉ 🔓',
+                    newLocked 
+                      ? 'Création et suppression de quêtes, hauts faits et compétences désactivées.'
+                      : 'Vous pouvez désormais créer et supprimer librement vos contenus !',
+                    'purchased'
+                  );
+                }}
+                className={`p-1.5 border rounded-lg transition-all duration-300 flex items-center justify-center ${
+                  appModeLocked
+                    ? 'border-red-950 bg-red-950/20 text-red-400 hover:text-red-300 hover:bg-red-950/40 hover:border-red-500/50'
+                    : 'border-emerald-950 bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 hover:border-emerald-500/50'
+                }`}
+                title={appModeLocked ? 'Passer en mode déverrouillé' : 'Passer en mode verrouillé'}
+              >
+                {appModeLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+              </button>
+
               <button
                 id="toggle-sound-btn"
                 onClick={() => setSoundEnabled(!soundEnabled)}
@@ -1102,7 +1640,7 @@ export default function App() {
         </div>
 
         {/* CORE MENU NAVIGATION */}
-        <div className="grid grid-cols-3 md:grid-cols-6 bg-[#111113] border border-[#1a1a1a] p-1 rounded-xl w-full max-w-3xl mx-auto font-display gap-1">
+        <div className="grid grid-cols-4 md:grid-cols-7 bg-[#111113] border border-[#1a1a1a] p-1 rounded-xl w-full max-w-4xl mx-auto font-display gap-1">
           <button
             id="nav-character"
             onClick={() => setActiveTab('character')}
@@ -1155,6 +1693,15 @@ export default function App() {
           >
             <Award className="w-4 h-4" />
             <span className="hidden sm:inline">Grimoire</span>
+          </button>
+
+          <button
+            id="nav-analytics"
+            onClick={() => setActiveTab('analytics')}
+            className={`py-2 col-span-2 md:col-span-1 rounded-lg text-xs font-semibold tracking-wider uppercase flex flex-col sm:flex-row items-center justify-center gap-1.5 transition ${activeTab === 'analytics' ? 'bg-[#1a1a1a] text-[#10b981] border border-[#2a2a2a]' : 'text-slate-400 hover:text-white'}`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span className="hidden sm:inline">Analyses</span>
           </button>
         </div>
 

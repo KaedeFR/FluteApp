@@ -19,28 +19,12 @@ type Archetype = {
 
 const ARCHETYPES: Archetype[] = [
   {
-    id: 'warrior',
-    name: 'Guerrier Implacable',
-    description: 'Privilégie la force physique et la discipline. Parfait pour les objectifs sportifs.',
-    stats: { vitality: 8, strength: 8, wisdom: 3, serenity: 4, magic: 2 },
-    avatarId: 'warrior',
-    classTitle: 'Guerrier',
-  },
-  {
-    id: 'mage',
-    name: 'Érudit Mystique',
-    description: 'Soif de connaissances et de lecture. Parfait pour les études et la créativité.',
-    stats: { vitality: 3, strength: 2, wisdom: 9, serenity: 5, magic: 6 },
-    avatarId: 'mage',
-    classTitle: 'Mage',
-  },
-  {
-    id: 'buddha_project',
-    name: "L'Adepte de la Voie",
-    description: 'Suit les principes du Projet Bouddha (Neuroplasticité, Microbiote, Compassion, Ikigai).',
-    stats: { vitality: 6, strength: 5, wisdom: 7, serenity: 7, magic: 0 },
-    avatarId: 'monk',
-    classTitle: 'Pratiquant',
+    id: 'flute_monk',
+    name: 'Le Moine Flûtiste',
+    description: 'Combine l\'harmonie de l\'esprit (méditation), la rigueur physique (musculation), l\'écriture, l\'expression musicale et la maîtrise linguistique.',
+    stats: { vitality: 6, strength: 6, wisdom: 6, serenity: 7, magic: 5 },
+    avatarId: 'flutist_monk',
+    classTitle: 'Moine Flûtiste',
   },
 ];
 
@@ -63,6 +47,10 @@ export function CharacterCreation({ onComplete, onCancel }: CharacterCreationPro
   });
   const [customAvatar, setCustomAvatar] = useState('adventurer');
   const [customClass, setCustomClass] = useState('Aventurier');
+
+  const maxStatsBudget = 30;
+  const totalCustomStats = (Object.values(customStats) as number[]).reduce((a, b) => a + b, 0);
+  const pointsRemaining = maxStatsBudget - totalCustomStats;
 
   const handleNext = () => {
     if (step === 1 && name.trim()) setStep(2);
@@ -234,7 +222,7 @@ export function CharacterCreation({ onComplete, onCancel }: CharacterCreationPro
                       }`}
                     >
                       <div className="text-4xl bg-[#111113] p-3 rounded-lg border border-[#1a1a1a]">
-                        {arch.avatarId === 'warrior' ? '⚔️' : arch.avatarId === 'mage' ? '🔮' : '🧘'}
+                        {arch.avatarId === 'warrior' ? '⚔️' : arch.avatarId === 'mage' ? '🔮' : arch.avatarId === 'flutist_monk' ? '🪈' : '🧘'}
                       </div>
                       <div>
                         <h4 className="font-bold text-slate-200 text-lg">{arch.name}</h4>
@@ -276,27 +264,51 @@ export function CharacterCreation({ onComplete, onCancel }: CharacterCreationPro
                   </div>
 
                   <div className="bg-[#0c0c0e] border border-[#2a2a2a] p-4 rounded-xl">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Répartition des points (Total: 25)</label>
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Attributs de statistique</label>
+                      <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${
+                        pointsRemaining === 0 
+                          ? 'text-[#10b981] border-[#10b981]/20 bg-[#10b981]/10' 
+                          : pointsRemaining < 0 
+                            ? 'text-red-400 border-red-500/20 bg-red-950/20' 
+                            : 'text-amber-400 border-amber-500/20 bg-amber-950/20 animate-pulse'
+                      }`}>
+                        {pointsRemaining === 0 
+                          ? 'Tous les points attribués ✓' 
+                          : `Points restants : ${pointsRemaining}`
+                        }
+                      </span>
+                    </div>
                     <div className="space-y-3">
-                      {Object.entries(customStats).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className="text-sm font-semibold capitalize text-slate-300">{key === 'vitality' ? 'Vitalité' : key === 'wisdom' ? 'Sagesse' : key === 'strength' ? 'Force' : key === 'serenity' ? 'Sérénité' : 'Magie'}</span>
-                          <div className="flex items-center gap-3">
-                            <button 
-                              onClick={() => setCustomStats(prev => ({...prev, [key]: Math.max(1, prev[key as keyof CharacterStats] - 1)}))}
-                              className="w-6 h-6 flex items-center justify-center bg-[#1a1a1c] border border-[#2a2a2a] rounded text-slate-400 hover:text-white"
-                            >-</button>
-                            <span className="w-4 text-center font-mono font-bold text-[#10b981]">{value}</span>
-                            <button 
-                              onClick={() => {
-                                const total = Object.values(customStats).reduce((a, b) => (a as number) + (b as number), 0) as number;
-                                if (total < 35) setCustomStats(prev => ({...prev, [key]: prev[key as keyof CharacterStats] + 1}))
-                              }}
-                              className="w-6 h-6 flex items-center justify-center bg-[#1a1a1c] border border-[#2a2a2a] rounded text-slate-400 hover:text-white"
-                            >+</button>
+                      {Object.entries(customStats).map(([key, value]) => {
+                        const val = value as number;
+                        const isMin = val <= 1;
+                        const isMax = pointsRemaining <= 0 || val >= 10; // Cap single attribute at 10 to encourage balanced distribution
+                        return (
+                          <div key={key} className="flex items-center justify-between">
+                            <span className="text-sm font-semibold capitalize text-slate-300">{key === 'vitality' ? 'Vitalité' : key === 'wisdom' ? 'Sagesse' : key === 'strength' ? 'Force' : key === 'serenity' ? 'Sérénité' : 'Magie'}</span>
+                            <div className="flex items-center gap-3">
+                              <button 
+                                type="button"
+                                disabled={isMin}
+                                onClick={() => setCustomStats(prev => ({...prev, [key]: Math.max(1, prev[key as keyof CharacterStats] - 1)}))}
+                                className="w-6 h-6 flex items-center justify-center bg-[#1a1a1c] border border-[#2a2a2a] rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                              >-</button>
+                              <span className="w-4 text-center font-mono font-bold text-[#10b981]">{val}</span>
+                              <button 
+                                type="button"
+                                disabled={isMax}
+                                onClick={() => {
+                                  if (pointsRemaining > 0) {
+                                    setCustomStats(prev => ({...prev, [key]: prev[key as keyof CharacterStats] + 1}));
+                                  }
+                                }}
+                                className="w-6 h-6 flex items-center justify-center bg-[#1a1a1c] border border-[#2a2a2a] rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                              >+</button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -331,10 +343,15 @@ export function CharacterCreation({ onComplete, onCancel }: CharacterCreationPro
           ) : (
             <button
               onClick={handleFinish}
-              disabled={creationMode === 'archetype' && !selectedArchetype}
+              disabled={creationMode === 'archetype' ? !selectedArchetype : (pointsRemaining !== 0)}
               className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:opacity-90 text-slate-950 px-6 py-2.5 rounded-lg font-bold tracking-wider uppercase text-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
-              Forger ma Légende <Sparkles className="w-4 h-4" />
+              {creationMode === 'custom' && pointsRemaining > 0 
+                ? `Attribuer ${pointsRemaining} point${pointsRemaining > 1 ? 's' : ''}` 
+                : creationMode === 'custom' && pointsRemaining < 0 
+                  ? `Trop de points (${Math.abs(pointsRemaining)})` 
+                  : <>Forger ma Légende <Sparkles className="w-4 h-4" /></>
+              }
             </button>
           )}
         </div>

@@ -32,9 +32,10 @@ interface SkillTreeProps {
   gold: number;
   quests?: Quest[];
   onUpgradeSkill: (skillId: string) => void;
-  onAddSkill: (newSkill: SkillNode) => void;
+  onAddSkill: (newSkill: SkillNode, createDailyQuest?: boolean) => void;
   onDeleteSkill?: (skillId: string) => void;
   editorMode?: boolean;
+  isAppLocked?: boolean;
 }
 
 const CATEGORY_META = {
@@ -52,12 +53,21 @@ export function SkillTree({
   onUpgradeSkill,
   onAddSkill,
   onDeleteSkill,
+  isAppLocked = false,
 }: SkillTreeProps) {
   // Ordered sub-tabs: 'unlocked' (Débloquées), 'locked' (Non-débloquées)
   const [activeSubTab, setActiveSubTab] = useState<'unlocked' | 'locked'>('unlocked');
   const [localEditorMode, setLocalEditorMode] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Automatically switch off editor mode if app becomes locked
+  React.useEffect(() => {
+    if (isAppLocked) {
+      setLocalEditorMode(false);
+      setShowAddForm(false);
+    }
+  }, [isAppLocked]);
 
   // New Skill Form fields
   const [selectedCategory, setSelectedCategory] = useState<StatCategory>('wisdom');
@@ -67,6 +77,7 @@ export function SkillTree({
   const [prerequisiteId, setPrerequisiteId] = useState<string>('');
   const [requiredQuestId, setRequiredQuestId] = useState<string>('');
   const [rankDetails, setRankDetails] = useState<{ title: string; description: string }[]>([]);
+  const [autoCreateDaily, setAutoCreateDaily] = useState(false);
 
   // Synchronize rank details size with maxLevel and pre-populate with default names
   React.useEffect(() => {
@@ -112,7 +123,7 @@ export function SkillTree({
       ranks: finalRanks,
     };
 
-    onAddSkill(newSkill);
+    onAddSkill(newSkill, autoCreateDaily);
     
     // Reset fields
     setTitle('');
@@ -120,6 +131,7 @@ export function SkillTree({
     setMaxLevel(5);
     setPrerequisiteId('');
     setRequiredQuestId('');
+    setAutoCreateDaily(false);
     setShowAddForm(false);
   };
 
@@ -150,29 +162,31 @@ export function SkillTree({
         </div>
 
         {/* Action Toggle controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLocalEditorMode(!localEditorMode)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider font-display flex items-center gap-1.5 transition cursor-pointer ${
-              localEditorMode
-                ? 'bg-purple-950/40 border border-purple-500/50 text-purple-300'
-                : 'bg-[#111113] border border-[#1a1a1a] text-slate-400 hover:text-slate-200 hover:border-slate-800'
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            {localEditorMode ? 'Mode Visionneur' : 'Gérer / Forger'}
-          </button>
-
-          {localEditorMode && (
+        {!isAppLocked && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs tracking-wider uppercase font-display flex items-center gap-1.5 transition shadow-lg shadow-purple-900/10 cursor-pointer"
+              onClick={() => setLocalEditorMode(!localEditorMode)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider font-display flex items-center gap-1.5 transition cursor-pointer ${
+                localEditorMode
+                  ? 'bg-purple-950/40 border border-purple-500/50 text-purple-300'
+                  : 'bg-[#111113] border border-[#1a1a1a] text-slate-400 hover:text-slate-200 hover:border-slate-800'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              Créer une Compétence
+              <Sliders className="w-4 h-4" />
+              {localEditorMode ? 'Mode Visionneur' : 'Gérer / Forger'}
             </button>
-          )}
-        </div>
+
+            {localEditorMode && (
+              <button
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs tracking-wider uppercase font-display flex items-center gap-1.5 transition shadow-lg shadow-purple-900/10 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Créer une Compétence
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* SUB-TABS & SEARCH BAR */}
@@ -395,17 +409,32 @@ export function SkillTree({
                 </div>
 
                 {/* Direct Max Level Input Option */}
-                <div className="flex items-center gap-2 pt-2 border-t border-[#1d1d21]">
-                  <span className="text-[10px] font-semibold text-slate-400">Nombre de rangs personnalisé:</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={maxLevel}
-                    onChange={(e) => setMaxLevel(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                    className="w-16 bg-[#0c0c0e] border border-[#222] focus:border-[#10b981] text-xs text-slate-200 rounded px-2 py-1 focus:outline-none text-center font-mono"
-                  />
-                  <span className="text-[9px] text-slate-500 italic">(Maximum 10 rangs)</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2.5 border-t border-[#1d1d21]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-slate-400">Nombre de rangs personnalisé:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={maxLevel}
+                      onChange={(e) => setMaxLevel(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                      className="w-16 bg-[#0c0c0e] border border-[#222] focus:border-[#10b981] text-xs text-slate-200 rounded px-2 py-1 focus:outline-none text-center font-mono"
+                    />
+                    <span className="text-[9px] text-slate-500 italic">(Maximum 10 rangs)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-[#0c0c0e] border border-[#1d1d21] rounded-lg px-3 py-1.5 hover:border-purple-500/30 transition-all">
+                    <input
+                      type="checkbox"
+                      id="autoCreateDaily"
+                      checked={autoCreateDaily}
+                      onChange={(e) => setAutoCreateDaily(e.target.checked)}
+                      className="rounded border-[#222] bg-[#0c0c0e] text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 cursor-pointer accent-purple-600"
+                    />
+                    <label htmlFor="autoCreateDaily" className="text-[10px] font-bold text-slate-300 cursor-pointer select-none">
+                      Créer automatiquement une quête quotidienne liée ⚔️
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -680,46 +709,71 @@ function SkillCard({
         {/* Action upgrading button */}
         {!isMaxed && (
           <div className="mt-3.5 pt-2.5 border-t border-[#1a1a1a]/50 flex items-center justify-between gap-2">
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 font-mono">Condition</span>
-              <span className="text-[10px] font-bold text-amber-500 font-sans">⚔️ Quête de Validation</span>
-            </div>
-
             {(() => {
-              const activeQuest = quests.find(q => q.skillIdToUnlock === skill.id && !q.completed);
+              const linkedDailyQuest = quests.find(q => q.skillIdToUnlock === skill.id && q.type === 'daily');
               
-              if (!prereqMet) {
+              if (linkedDailyQuest) {
                 return (
-                  <button
-                    disabled
-                    className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-950/5 border border-red-950/20 text-red-500/30 cursor-not-allowed flex items-center gap-1"
-                  >
-                    <span>Bloqué</span>
-                    <LockKeyhole className="w-3.5 h-3.5" />
-                  </button>
-                );
-              }
-
-              if (activeQuest) {
-                return (
-                  <div className="flex flex-col items-end">
-                    <span className="text-[9px] text-slate-500 italic">Quête active</span>
-                    <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase rounded-lg animate-pulse flex items-center gap-1">
-                      En cours ⏳
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 font-mono">Condition</span>
+                      <span className="text-[10px] font-bold text-teal-400 font-sans">🔥 Série Quotidienne</span>
+                    </div>
+                    <div className="flex flex-col items-end text-right">
+                      <span className="text-[9px] text-slate-500 italic">Série actuelle</span>
+                      <span className="px-2.5 py-1 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-[10px] font-bold uppercase rounded-lg flex items-center gap-1">
+                        {linkedDailyQuest.streak} {linkedDailyQuest.streak > 1 ? 'jours' : 'jour'} ⚡
+                      </span>
+                    </div>
+                  </>
                 );
               }
 
               return (
-                <button
-                  id={`upgrade-skill-btn-${skill.id}`}
-                  onClick={() => onUpgradeSkill(skill.id)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-[#10b981]/10 border border-[#10b981]/40 hover:border-[#10b981] text-[#10b981] cursor-pointer active:scale-95 flex items-center gap-1 transition-all"
-                >
-                  <span>{skill.level === 0 ? 'Débloquer' : 'Élever'}</span>
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500 font-mono">Condition</span>
+                    <span className="text-[10px] font-bold text-amber-500 font-sans">⚔️ Quête de Validation</span>
+                  </div>
+
+                  {(() => {
+                    const activeQuest = quests.find(q => q.skillIdToUnlock === skill.id && !q.completed);
+                    
+                    if (!prereqMet) {
+                      return (
+                        <button
+                          disabled
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-950/5 border border-red-950/20 text-red-500/30 cursor-not-allowed flex items-center gap-1"
+                        >
+                          <span>Bloqué</span>
+                          <LockKeyhole className="w-3.5 h-3.5" />
+                        </button>
+                      );
+                    }
+
+                    if (activeQuest) {
+                      return (
+                        <div className="flex flex-col items-end">
+                          <span className="text-[9px] text-slate-500 italic">Quête active</span>
+                          <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase rounded-lg animate-pulse flex items-center gap-1">
+                            En cours ⏳
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        id={`upgrade-skill-btn-${skill.id}`}
+                        onClick={() => onUpgradeSkill(skill.id)}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-[#10b981]/10 border border-[#10b981]/40 hover:border-[#10b981] text-[#10b981] cursor-pointer active:scale-95 flex items-center gap-1 transition-all"
+                      >
+                        <span>{skill.level === 0 ? 'Débloquer' : 'Élever'}</span>
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    );
+                  })()}
+                </>
               );
             })()}
           </div>

@@ -28,6 +28,7 @@ import {
   Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { RpgIcon } from './RpgIcon';
 
 interface LootShopProps {
   gold: number;
@@ -156,8 +157,8 @@ export function LootShop({
         <div className="flex items-center gap-3">
           <div className="bg-[#111113] border border-[#1a1a1a] px-4 py-2 rounded-xl flex items-center gap-2 shadow-inner">
             <span className="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">VOTRE COFFRE :</span>
-            <div className="text-lg font-extrabold text-[#10b981] font-mono flex items-center gap-1">
-              <span>🪙</span>{gold} <span className="text-[10px] font-semibold text-slate-500">Or</span>
+            <div className="text-lg font-extrabold text-[#10b981] font-mono flex items-center gap-1.5">
+              <RpgIcon iconType="gold" size="xs" className="w-6 h-6" />{gold} <span className="text-[10px] font-semibold text-slate-500">Or</span>
             </div>
           </div>
 
@@ -346,9 +347,12 @@ export function LootShop({
 
                   {/* Card bottom buy controls */}
                   <div className="pt-3 border-t border-[#1a1a1a] mt-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-xs text-slate-400 font-mono">Coût:</span>
-                      <span className="text-sm font-extrabold text-[#10b981] font-mono">🪙 {reward.goldCost} Or</span>
+                      <span className="text-sm font-extrabold text-[#10b981] font-mono flex items-center gap-1">
+                        <RpgIcon iconType="gold" size="xs" className="w-5 h-5 shrink-0" />
+                        {reward.goldCost} Or
+                      </span>
                     </div>
 
                     <button
@@ -437,8 +441,8 @@ export function LootShop({
                     <div className="space-y-3">
                       <div className="flex justify-between items-start">
                         {/* Avatar / Item emoji with rarity background */}
-                        <div className={`p-3 rounded-xl border ${rStyle.border} ${rStyle.bg} ${rStyle.color}`}>
-                          <span className="text-2xl">{item.icon}</span>
+                        <div className={`p-1 rounded-xl border ${rStyle.border} ${rStyle.bg} ${rStyle.color}`}>
+                          <RpgIcon iconType={item.icon} size="sm" className="w-12 h-12" rarity={item.rarity} />
                         </div>
 
                         <div className="text-right">
@@ -492,9 +496,12 @@ export function LootShop({
 
                     {/* Gold and purchase CTA */}
                     <div className="pt-4 border-t border-[#1a1a1a] mt-4 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1 font-mono">
+                      <div className="flex items-center gap-1.5 font-mono">
                         <span className="text-xs text-slate-500">Prix:</span>
-                        <span className="text-sm font-extrabold text-[#10b981]">🪙 {item.cost} Or</span>
+                        <span className="text-sm font-extrabold text-[#10b981] flex items-center gap-1">
+                          <RpgIcon iconType="gold" size="xs" className="w-5 h-5 shrink-0" />
+                          {item.cost} Or
+                        </span>
                       </div>
 
                       <button

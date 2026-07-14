@@ -26,7 +26,10 @@ import {
   Save,
   BookMarked,
   Scroll,
-  CalendarDays
+  CalendarDays,
+  Plus,
+  Trash,
+  Sliders
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -39,6 +42,9 @@ interface GrimoireProps {
   quests: Quest[];
   journalEntries?: JournalEntries;
   onSaveJournalEntry?: (dateStr: string, noteText: string) => void;
+  isAppLocked?: boolean;
+  onAddAchievement?: (newAch: Achievement) => void;
+  onDeleteAchievement?: (achId: string) => void;
 }
 
 const ICON_MAP: Record<string, any> = {
@@ -50,7 +56,9 @@ const ICON_MAP: Record<string, any> = {
   Gem,
   Shield,
   BookOpen,
-  Zap
+  Zap,
+  Heart,
+  Sparkles
 };
 
 const MONTHS_FR = [
@@ -69,6 +77,9 @@ export function Grimoire({
   quests = [],
   journalEntries = {},
   onSaveJournalEntry,
+  isAppLocked = false,
+  onAddAchievement,
+  onDeleteAchievement,
 }: GrimoireProps) {
   // Calendar states
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -83,6 +94,22 @@ export function Grimoire({
   // Local note draft
   const [localNote, setLocalNote] = useState('');
   const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
+
+  // Form states for creating custom achievements
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newIcon, setNewIcon] = useState('Award');
+  const [newConditionType, setNewConditionType] = useState<Achievement['conditionType']>('quests_completed');
+  const [newConditionValue, setNewConditionValue] = useState<number>(1);
+  const [newTargetStat, setNewTargetStat] = useState<'vitality' | 'wisdom' | 'strength' | 'serenity' | 'magic'>('wisdom');
+
+  // Automatically hide custom achievement creation form if app becomes locked
+  useEffect(() => {
+    if (isAppLocked) {
+      setShowAddForm(false);
+    }
+  }, [isAppLocked]);
 
   // Keep local draft synchronized with selected date in journalEntries
   useEffect(() => {
@@ -109,6 +136,32 @@ export function Grimoire({
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     setSelectedDateStr(`${year}-${month}-${day}`);
+  };
+
+  const handleSubmitCustomAchievement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newDesc.trim()) return;
+    if (onAddAchievement) {
+      onAddAchievement({
+        id: `ach-custom-${Date.now()}`,
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        badgeIcon: newIcon,
+        conditionType: newConditionType,
+        conditionValue: Number(newConditionValue),
+        targetStat: newConditionType === 'stat_reached' ? newTargetStat : undefined,
+        progress: 0,
+        target: Number(newConditionValue),
+        unlocked: false,
+      });
+      // Reset form
+      setNewTitle('');
+      setNewDesc('');
+      setNewIcon('Award');
+      setNewConditionType('quests_completed');
+      setNewConditionValue(1);
+      setShowAddForm(false);
+    }
   };
 
   // Helper to retrieve the correct Lucide icon component
@@ -484,10 +537,144 @@ export function Grimoire({
 
       {/* Achievements Section */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-300 tracking-wider font-display uppercase flex items-center gap-2">
-          <Award className="w-4 h-4 text-purple-400" />
-          Hauts Faits
-        </h3>
+        <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-2">
+          <h3 className="text-sm font-semibold text-slate-300 tracking-wider font-display uppercase flex items-center gap-2">
+            <Award className="w-4 h-4 text-purple-400" />
+            Hauts Faits
+          </h3>
+          {!isAppLocked && onAddAchievement && (
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider font-display flex items-center gap-1 transition-all duration-300 ${
+                showAddForm
+                  ? 'bg-purple-950/40 border border-purple-500/50 text-purple-300'
+                  : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/10'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {showAddForm ? 'Annuler' : 'Créer un Haut Fait'}
+            </button>
+          )}
+        </div>
+
+        {/* Custom Achievement Creation Form */}
+        <AnimatePresence>
+          {showAddForm && (
+            <motion.form
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              onSubmit={handleSubmitCustomAchievement}
+              className="bg-[#111113]/90 border border-[#222225] p-5 rounded-2xl space-y-4 overflow-hidden"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Titre du Haut Fait</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Ex: Maître Yogi"
+                    className="w-full bg-[#070708] border border-[#1a1a1a] focus:border-[#10b981] rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none transition"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Description</label>
+                  <input
+                    type="text"
+                    required
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    placeholder="Ex: Atteindre un niveau de sérénité légendaire."
+                    className="w-full bg-[#070708] border border-[#1a1a1a] focus:border-[#10b981] rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Icon selector list */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Icône de badge</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(ICON_MAP).map((iconName) => {
+                    const IconComponent = ICON_MAP[iconName];
+                    const isSelected = newIcon === iconName;
+                    return (
+                      <button
+                        type="button"
+                        key={iconName}
+                        onClick={() => setNewIcon(iconName)}
+                        className={`p-2 rounded-lg border transition-all duration-200 flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-purple-500/10 border-purple-500 text-purple-400'
+                            : 'bg-[#070708] border-[#1a1a1a] text-slate-500 hover:text-slate-300 hover:border-slate-700'
+                        }`}
+                        title={iconName}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Type de Progrès</label>
+                  <select
+                    value={newConditionType}
+                    onChange={(e) => setNewConditionType(e.target.value as any)}
+                    className="w-full bg-[#070708] border border-[#1a1a1a] focus:border-[#10b981] rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none transition"
+                  >
+                    <option value="quests_completed">Quêtes complétées</option>
+                    <option value="dailies_completed">Quêtes quotidiennes complétées</option>
+                    <option value="gold_earned">Or accumulé (GP)</option>
+                    <option value="level_reached">Niveau du Héros atteint</option>
+                    <option value="stat_reached">Attribut de statistique atteint</option>
+                  </select>
+                </div>
+
+                {newConditionType === 'stat_reached' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Statistique requise</label>
+                    <select
+                      value={newTargetStat}
+                      onChange={(e) => setNewTargetStat(e.target.value as any)}
+                      className="w-full bg-[#070708] border border-[#1a1a1a] focus:border-[#10b981] rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none transition"
+                    >
+                      <option value="vitality">Vitalité</option>
+                      <option value="wisdom">Sagesse</option>
+                      <option value="strength">Force</option>
+                      <option value="serenity">Sérénité</option>
+                      <option value="magic">Magie</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider block">Valeur cible à atteindre</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={newConditionValue}
+                    onChange={(e) => setNewConditionValue(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-[#070708] border border-[#1a1a1a] focus:border-[#10b981] rounded-xl px-3.5 py-1.5 text-xs text-slate-100 focus:outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider font-display transition"
+                >
+                  Ajouter le Haut Fait
+                </button>
+              </div>
+            </motion.form>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {achievements.map((ach) => {
@@ -519,13 +706,28 @@ export function Grimoire({
 
                 {/* Text & Progress */}
                 <div className="flex-1 min-w-0 space-y-1.5 self-center">
-                  <div>
-                    <h4 className={`font-semibold text-sm leading-snug font-display tracking-wide truncate ${ach.unlocked ? 'text-slate-200' : 'text-slate-500'}`}>
-                      {ach.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-400 leading-normal line-clamp-2">
-                      {ach.description}
-                    </p>
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <h4 className={`font-semibold text-sm leading-snug font-display tracking-wide truncate ${ach.unlocked ? 'text-slate-200' : 'text-slate-500'}`}>
+                        {ach.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 leading-normal line-clamp-2">
+                        {ach.description}
+                      </p>
+                    </div>
+
+                    {/* Delete button for achievements (only when app is unlocked) */}
+                    {!isAppLocked && onDeleteAchievement && (
+                      <button
+                        type="button"
+                        id={`delete-achievement-${ach.id}`}
+                        onClick={() => onDeleteAchievement(ach.id)}
+                        className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-red-950/25 transition-all self-start"
+                        title="Supprimer ce haut fait"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Progress Line */}

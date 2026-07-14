@@ -33,6 +33,8 @@ interface QuestBoardProps {
   onDeleteQuest: (questId: string) => void;
   onToggleMilestone: (questId: string, milestoneId: string) => void;
   onForceResetDailies: () => void;
+  onUpdateQuestStreak: (questId: string, streak: number) => void;
+  isAppLocked?: boolean;
 }
 
 export function QuestBoard({
@@ -43,9 +45,11 @@ export function QuestBoard({
   onDeleteQuest,
   onToggleMilestone,
   onForceResetDailies,
+  onUpdateQuestStreak,
+  isAppLocked = false,
 }: QuestBoardProps) {
-  // Ordered sub-tabs: 'main' (Principale), 'secondary' (Secondaire), 'skills' (Compétences)
-  const [activeSubTab, setActiveSubTab] = useState<'main' | 'secondary' | 'skills'>('main');
+  // Ordered sub-tabs: 'main' (Principale), 'secondary' (Secondaire), 'skills' (Compétences), 'streaks' (Séries)
+  const [activeSubTab, setActiveSubTab] = useState<'main' | 'secondary' | 'skills' | 'streaks'>('main');
   
   // Clear filter for Quest Types
   const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'daily' | 'short' | 'epic'>('all');
@@ -109,6 +113,9 @@ export function QuestBoard({
     } else if (activeSubTab === 'secondary') {
       setIsMain(false);
       setSelectedSkillId('');
+    } else if (activeSubTab === 'streaks') {
+      setIsMain(false);
+      setSelectedSkillId('');
     } else { // skills
       setIsMain(false);
       if (skills.length > 0) {
@@ -122,9 +129,9 @@ export function QuestBoard({
     // Default form values
     setTitle('');
     setDescription('');
-    setType(activeTypeFilter === 'all' ? 'short' : activeTypeFilter);
+    setType(activeSubTab === 'streaks' ? 'daily' : (activeTypeFilter === 'all' ? 'short' : activeTypeFilter));
     setDifficulty('medium');
-    setFrequency('once');
+    setFrequency(activeSubTab === 'streaks' ? 'daily' : 'once');
     setScheduledDate('');
     setDeadline('');
     setMilestones([]);
@@ -132,11 +139,19 @@ export function QuestBoard({
   };
 
   // Categorize quests for the sub-tabs
-  const isSkillQuest = (q: Quest) => !!q.skillIdToUnlock;
+  const isSkillQuest = (q: Quest) => {
+    const excludedIds = ['q-fm-d1', 'q-fm-d2', 'q-fm-d3', 'q-fm-d4'];
+    if (excludedIds.includes(q.id)) return false;
+    return !!q.skillIdToUnlock;
+  };
 
   const getSubTabQuests = () => {
-    if (activeSubTab === 'skills') {
-      return quests.filter(q => isSkillQuest(q));
+    if (activeSubTab === 'streaks') {
+      // Uniquement les quêtes en série (quotidiennes) liées à des compétences
+      return quests.filter(q => q.type === 'daily' && isSkillQuest(q));
+    } else if (activeSubTab === 'skills') {
+      // Uniquement les quêtes de validation de compétences (non quotidiennes)
+      return quests.filter(q => isSkillQuest(q) && q.type !== 'daily');
     } else if (activeSubTab === 'main') {
       return quests.filter(q => q.isMain && !isSkillQuest(q));
     } else { // secondary
@@ -191,7 +206,7 @@ export function QuestBoard({
       scheduledDate: scheduledDate || undefined,
       deadline: deadline || undefined,
       createdAt: new Date().toISOString(),
-      skillIdToUnlock: (activeSubTab === 'skills' || selectedSkillId) ? selectedSkillId || undefined : undefined,
+      skillIdToUnlock: selectedSkillId || (activeSubTab === 'skills' && skills.length > 0 ? skills[0].id : undefined),
     };
 
     onAddQuest(newQuest);
@@ -461,14 +476,16 @@ export function QuestBoard({
                 {quest.completed ? "Quête Validée" : "Valider la quête"}
               </button>
 
-              <button
-                id={`delete-quest-${quest.id}`}
-                onClick={() => onDeleteQuest(quest.id)}
-                className="text-slate-500 hover:text-red-400 p-2 hover:bg-red-950/20 rounded-lg border border-[#1a1a1a] transition shrink-0 cursor-pointer"
-                title="Supprimer la quête"
-              >
-                <Trash className="w-3.5 h-3.5" />
-              </button>
+              {!isAppLocked && (
+                <button
+                  id={`delete-quest-${quest.id}`}
+                  onClick={() => onDeleteQuest(quest.id)}
+                  className="text-slate-500 hover:text-red-400 p-2 hover:bg-red-950/20 rounded-lg border border-[#1a1a1a] transition shrink-0 cursor-pointer"
+                  title="Supprimer la quête"
+                >
+                  <Trash className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -481,8 +498,8 @@ export function QuestBoard({
       {/* Header & Sub-Tabs Switchers */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1a1a1a] pb-4">
         
-        {/* Navigation Tabs - Strict requested order: Principale, Secondaire, Compétences */}
-        <div className="flex bg-[#0c0c0e] border border-[#1a1a1a] p-1 rounded-xl w-fit">
+        {/* Navigation Tabs - Strict requested order: Principale, Secondaire, Compétences, Séries */}
+        <div className="flex bg-[#0c0c0e] border border-[#1a1a1a] p-1 rounded-xl w-fit flex-wrap gap-1">
           <button
             id="subtab-main"
             onClick={() => {
@@ -527,78 +544,191 @@ export function QuestBoard({
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             Compétences
           </button>
+
+          <button
+            id="subtab-streaks"
+            onClick={() => {
+              setActiveSubTab('streaks');
+            }}
+            className={`px-4 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase font-display flex items-center gap-2 transition cursor-pointer ${
+              activeSubTab === 'streaks' 
+                ? 'bg-[#1a1a1a] text-amber-400 border border-[#2a2a2a] shadow-inner font-extrabold' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500/10" />
+            Séries
+          </button>
         </div>
 
         {/* Top Reset and Create Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            id="open-add-quest-modal"
-            onClick={handleOpenAddModal}
-            className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:opacity-90 active:scale-95 text-slate-950 px-4 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase font-display flex items-center gap-1.5 transition shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Créer une Quête
-          </button>
-        </div>
-      </div>
-
-      {/* Quest Type filter section - makes quest types much clearer! */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111113]/50 border border-[#1a1a1a] p-3 rounded-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
-            Filtrer par type de quête :
-          </span>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: 'all', label: 'Toutes', icon: Layers },
-              { id: 'daily', label: 'Quotidiennes', icon: Calendar },
-              { id: 'short', label: 'Courtes', icon: Award },
-              { id: 'epic', label: 'Épiques', icon: Flame },
-            ].map((f) => {
-              const IconComp = f.icon;
-              const isSelected = activeTypeFilter === f.id;
-              return (
-                <button
-                  key={f.id}
-                  id={`type-filter-${f.id}`}
-                  onClick={() => setActiveTypeFilter(f.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase font-mono flex items-center gap-1.5 border transition cursor-pointer ${
-                    isSelected 
-                      ? 'bg-[#10b981]/15 border-[#10b981] text-[#10b981] font-extrabold' 
-                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1a1a]/40'
-                  }`}
-                >
-                  <IconComp className="w-3 h-3" />
-                  {f.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="text-[10px] text-slate-500 font-mono">
-          {filteredQuests.length} quête{filteredQuests.length > 1 ? 's' : ''} trouvée{filteredQuests.length > 1 ? 's' : ''}
-        </div>
-      </div>
-
-      {/* Quest Grid Display (Dalles) */}
-      <div className="min-h-[300px]">
-        {filteredQuests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-[#1a1a1a] rounded-2xl bg-[#111113]/20">
-            <div className="text-4xl mb-3">📜</div>
-            <p className="text-slate-400 font-display text-sm font-semibold">Aucune quête disponible ici.</p>
-            <p className="text-slate-500 text-xs mt-1 max-w-xs leading-normal">
-              Forgez de nouvelles quêtes pour récolter du butin, de l'XP et éveiller vos statistiques légendaires !
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AnimatePresence mode="popLayout">
-              {filteredQuests.map(quest => renderQuestCard(quest))}
-            </AnimatePresence>
+        {!isAppLocked && (
+          <div className="flex items-center gap-2">
+            <button
+              id="open-add-quest-modal"
+              onClick={handleOpenAddModal}
+              className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:opacity-90 active:scale-95 text-slate-950 px-4 py-2.5 rounded-xl text-xs font-bold tracking-wider uppercase font-display flex items-center gap-1.5 transition shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              Créer une Quête
+            </button>
           </div>
         )}
       </div>
+
+      {/* Quest Type filter section - makes quest types much clearer! */}
+      {activeSubTab !== 'streaks' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111113]/50 border border-[#1a1a1a] p-3 rounded-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+              Filtrer par type de quête :
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { id: 'all', label: 'Toutes', icon: Layers },
+                { id: 'daily', label: 'Quotidiennes', icon: Calendar },
+                { id: 'short', label: 'Courtes', icon: Award },
+                { id: 'epic', label: 'Épiques', icon: Flame },
+              ].map((f) => {
+                const IconComp = f.icon;
+                const isSelected = activeTypeFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    id={`type-filter-${f.id}`}
+                    onClick={() => setActiveTypeFilter(f.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase font-mono flex items-center gap-1.5 border transition cursor-pointer ${
+                      isSelected 
+                        ? 'bg-[#10b981]/15 border-[#10b981] text-[#10b981] font-extrabold' 
+                        : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#1a1a1a]/40'
+                    }`}
+                  >
+                    <IconComp className="w-3 h-3" />
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-500 font-mono">
+            {filteredQuests.length} quête{filteredQuests.length > 1 ? 's' : ''} trouvée{filteredQuests.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'streaks' ? (
+        <div className="space-y-4">
+          {filteredQuests.length === 0 ? (
+            <div className="text-center py-16 bg-[#111113]/20 rounded-2xl border-2 border-dashed border-[#1a1a1a] px-4 flex flex-col items-center justify-center">
+              <div className="text-4xl mb-3">🔥</div>
+              <p className="text-slate-400 font-display text-sm font-semibold">Aucune série de quêtes active.</p>
+              <p className="text-slate-500 text-xs mt-1 max-w-sm leading-normal">
+                Créez une quête de type "Quotidienne" liée à une compétence pour commencer à suivre vos séries et débloquer ses rangs de discipline !
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredQuests.map(qd => {
+                const linkedSkill = skills.find(s => s.id === qd.skillIdToUnlock);
+                const catDetails = getCategoryDetails(qd.category);
+                const CatIcon = catDetails.icon;
+
+                return (
+                  <div key={qd.id} className="bg-[#111113]/90 border border-amber-500/10 hover:border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.01)] hover:shadow-[0_0_20px_rgba(245,158,11,0.03)] p-5 rounded-2xl space-y-4 transition-all duration-300 relative overflow-hidden group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-slate-100 tracking-wide line-clamp-1">{qd.title}</h4>
+                          {qd.completed ? (
+                            <span className="text-[8px] font-mono bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/20 px-1.5 py-0.5 rounded font-extrabold uppercase">Validée</span>
+                          ) : (
+                            <span className="text-[8px] font-mono bg-slate-500/10 text-slate-400 border border-slate-500/10 px-1.5 py-0.5 rounded font-bold uppercase">À faire</span>
+                          )}
+                        </div>
+                        
+                        {linkedSkill ? (
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-mono">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 border rounded-md ${catDetails.color} text-[8px] font-bold uppercase`}>
+                              <CatIcon className="w-2.5 h-2.5" />
+                              {catDetails.label}
+                            </span>
+                            <span>Compétence : <span className="text-[#10b981] font-semibold">{linkedSkill.title}</span></span>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-500 italic font-mono">Aucune compétence liée à cette quête</p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end shrink-0">
+                        <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-bold text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.05)]">
+                          <Flame className="w-4 h-4 fill-amber-500/10 animate-pulse" />
+                          <span>{qd.streak || 0} jour{(qd.streak || 0) > 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-[#1a1a1a]/50 pt-3 text-[10px]">
+                      <span className="text-slate-500 font-mono">Ajuster la série :</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={(qd.streak || 0) <= 0}
+                          onClick={() => onUpdateQuestStreak(qd.id, Math.max(0, (qd.streak || 0) - 1))}
+                          className="w-7 h-7 rounded-lg bg-[#0c0c0e] border border-[#1a1a1a] hover:border-red-500/30 text-slate-400 hover:text-red-400 flex items-center justify-center transition active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          title="Diminuer la série d'un jour"
+                        >
+                          -1
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuestStreak(qd.id, (qd.streak || 0) + 1)}
+                          className="w-7 h-7 rounded-lg bg-[#0c0c0e] border border-[#1a1a1a] hover:border-amber-500/30 text-slate-400 hover:text-amber-400 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                          title="Augmenter la série d'un jour"
+                        >
+                          +1
+                        </button>
+                        
+                        <div className="flex gap-1 pl-1.5 border-l border-[#1a1a1a]/50">
+                          {[5, 15, 30, 60, 120].map(p => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => onUpdateQuestStreak(qd.id, p)}
+                              className={`px-2 py-1 rounded-md text-[8px] font-mono font-extrabold border transition ${(qd.streak || 0) === p ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-[#0c0c0e] border-[#1a1a1a] text-slate-500 hover:text-slate-300'} cursor-pointer`}
+                            >
+                              {p}j
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Quest Grid Display (Dalles) */
+        <div className="min-h-[300px]">
+          {filteredQuests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-[#1a1a1a] rounded-2xl bg-[#111113]/20">
+              <div className="text-4xl mb-3">📜</div>
+              <p className="text-slate-400 font-display text-sm font-semibold">Aucune quête disponible ici.</p>
+              <p className="text-slate-500 text-xs mt-1 max-w-xs leading-normal">
+                Forgez de nouvelles quêtes pour récolter du butin, de l'XP et éveiller vos statistiques légendaires !
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence mode="popLayout">
+                {filteredQuests.map(quest => renderQuestCard(quest))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CREATE QUEST MODAL OVERLAY */}
       <AnimatePresence>

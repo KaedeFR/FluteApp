@@ -20,6 +20,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { RpgIcon } from './RpgIcon';
 
 interface InventoryProps {
   equipment: EquipmentItem[];
@@ -123,9 +124,9 @@ export function Inventory({ equipment = [], onToggleEquip }: InventoryProps) {
                         : 'border-dashed border-[#1a1a1a] bg-[#0c0c0e]/40 hover:border-slate-800'
                     }`}
                   >
-                    <span className="text-3xl mb-1 group-hover:scale-110 transition duration-300">
-                      {item ? item.icon : slotMeta.icon}
-                    </span>
+                    <div className="mb-2 group-hover:scale-110 transition duration-300">
+                      <RpgIcon iconType={item ? item.icon : slotKey} size="md" className="w-14 h-14" rarity={item?.rarity} />
+                    </div>
                     <span className={`text-[10px] font-bold font-display ${item ? rarityStyle?.color : 'text-slate-500'}`}>
                       {item ? item.name : slotMeta.label}
                     </span>
@@ -220,8 +221,8 @@ export function Inventory({ equipment = [], onToggleEquip }: InventoryProps) {
                     >
                       <div className="space-y-3">
                         <div className="flex justify-between items-start">
-                          <div className={`p-2.5 rounded-xl border ${rStyle.border} ${rStyle.bg} ${rStyle.color}`}>
-                            <span className="text-2xl">{item.icon}</span>
+                          <div className={`p-1 rounded-xl border ${rStyle.border} ${rStyle.bg} ${rStyle.color}`}>
+                            <RpgIcon iconType={item.icon} size="sm" className="w-12 h-12" rarity={item.rarity} />
                           </div>
 
                           <div className="text-right">

@@ -27,6 +27,8 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import EvolutionFluteIcon from './EvolutionFluteIcon';
+import { RpgIcon } from './RpgIcon';
 
 interface CharacterSheetProps {
   character: Character;
@@ -112,65 +114,65 @@ export const EVOLUTIONS: CharacterEvolution[] = [
   {
     tier: 1,
     minLevel: 1,
-    title: 'Novice Vagabond',
-    emoji: '🪵',
-    description: 'Vous débutez votre voyage. Chaque action quotidienne pose les bases de votre légende.',
-    bonus: 'Dégâts de base stables',
+    title: 'Flûtiste débutant',
+    emoji: '🪈',
+    description: 'Chaque note de votre instrument pose les bases d\'une nouvelle discipline de vie.',
+    bonus: 'Sifflement de base stable',
     color: 'text-slate-400 bg-slate-950/60 border-slate-800',
     borderColor: 'border-slate-800',
     glowClass: 'shadow-slate-500/5'
   },
   {
     tier: 2,
-    minLevel: 5,
-    title: 'Initié Aguerri',
-    emoji: '⚔️',
-    description: 'Vos habitudes se stabilisent. Vous résistez de mieux en mieux aux distractions de la vie.',
-    bonus: '+10% Résistance aux échecs de quête',
+    minLevel: 20,
+    title: 'Apprenti Flûte',
+    emoji: '🎵',
+    description: 'Vos habitudes se stabilisent. Vos doigts glissent avec précision sur les trous de la régularité.',
+    bonus: '+10% Résistance aux échecs',
     color: 'text-emerald-400 bg-emerald-950/25 border-emerald-500/30',
     borderColor: 'border-emerald-500/30',
     glowClass: 'shadow-emerald-500/10'
   },
   {
     tier: 3,
-    minLevel: 10,
-    title: 'Chevalier du Flow',
-    emoji: '🛡️',
-    description: 'La discipline est devenue votre armure. Vos routines sont exécutées avec une précision militaire.',
-    bonus: '+15% XP gagnée sur les quêtes quotidiennes',
+    minLevel: 40,
+    title: 'Pipoteur confirmé',
+    emoji: '🎶',
+    description: 'Un souffle d\'énergie pure alimente votre quotidien. Votre discipline n\'est pas du pipeau.',
+    bonus: '+15% XP gagnée',
     color: 'text-blue-400 bg-blue-950/25 border-blue-500/30',
     borderColor: 'border-blue-500/30',
     glowClass: 'shadow-blue-500/10'
   },
   {
     tier: 4,
-    minLevel: 15,
-    title: 'Maître Champion',
-    emoji: '⚡',
-    description: 'Vous maîtrisez votre esprit et votre corps. Les distractions n\'ont plus d\'impact sur vous.',
-    bonus: '+20% d\'Or gagné sur toutes les quêtes',
+    minLevel: 60,
+    title: 'La flûte est la voie',
+    emoji: '✨',
+    description: 'La mélodie de vos quêtes résonne en parfaite harmonie avec vos objectifs de vie.',
+    bonus: '+20% d\'Or gagné',
     color: 'text-[#10b981] bg-emerald-950/20 border-[#10b981]/30',
     borderColor: 'border-[#10b981]/30',
     glowClass: 'shadow-[#10b981]/15'
   },
   {
     tier: 5,
-    minLevel: 20,
-    title: 'Demi-Dieu Stoïque',
+    minLevel: 80,
+    title: 'Flûteur transcendental',
     emoji: '🌟',
-    description: 'Un niveau d\'organisation extraordinaire. Votre calme olympien face aux imprévus est inébranlable.',
-    bonus: '+25% Régénération naturelle de PV',
+    description: 'Une symphonie d\'ondes positives émane de votre être, dissipant tous les doutes.',
+    bonus: '+25% Régénération PV',
     color: 'text-purple-400 bg-purple-950/25 border-purple-500/30',
     borderColor: 'border-purple-500/30',
     glowClass: 'shadow-purple-500/15'
   },
   {
     tier: 6,
-    minLevel: 30,
-    title: 'Divinité de l\'Éveil',
+    minLevel: 100,
+    title: 'Dieu Flûtant céleste',
     emoji: '🌌',
-    description: 'Éveil complet. Vos projets de vie se matérialisent rapidement par la simple force de votre volonté.',
-    bonus: 'Multiplicateur de stats x1.5 et Titre Suprême',
+    description: 'Éveil suprême. Votre souffle harmonieux module le tissu même de la réalité.',
+    bonus: 'Multiplicateur x1.5 et Titre Suprême',
     color: 'text-rose-400 bg-rose-950/25 border-rose-500/30',
     borderColor: 'border-rose-500/30',
     glowClass: 'shadow-rose-500/20'
@@ -384,8 +386,8 @@ export function CharacterSheet({
           </div>
 
           {/* Active Evolution Badge under Portrait */}
-          <div className="mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#111113] to-[#0c0c0e] border border-[#2a2a2a] shadow-md">
-            <span className="text-xs" role="img" aria-label="emoji">{currentEvolution.emoji}</span>
+          <div className="mt-3 flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#111113] to-[#0c0c0e] border border-[#2a2a2a] shadow-md">
+            <EvolutionFluteIcon tier={currentEvolution.tier} size="sm" className="w-5 h-5" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-[#10b981] font-bold">
               {currentEvolution.title}
             </span>
@@ -489,8 +491,7 @@ export function CharacterSheet({
 
         {/* Système d'Origine / Sélection des Races */}
         <div className="w-full bg-[#111113]/60 border border-[#1a1a1a]/80 rounded-xl p-3 mb-5 space-y-2 text-center">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between px-1">
-            <span>🧬 Origine / Race</span>
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-end px-1">
             <span className="text-[9px] text-[#10b981] font-semibold uppercase font-mono">Bonus Actif</span>
           </div>
           <div className="flex items-center gap-3 bg-[#0c0c0e]/60 border border-[#1a1a1a] rounded-lg p-3">
@@ -502,7 +503,6 @@ export function CharacterSheet({
                   <span className="text-3xl">{r.emoji}</span>
                   <div className="text-left">
                     <span className="text-sm font-bold text-slate-200 block font-display tracking-wide uppercase">{r.name}</span>
-                    <span className="text-xs text-slate-400 font-sans italic block">{r.desc}</span>
                     <span className="text-[10px] text-[#10b981] font-semibold font-mono uppercase tracking-wider block mt-1">{r.bonusLabel}</span>
                   </div>
                 </>
@@ -514,8 +514,8 @@ export function CharacterSheet({
         {/* Barre de PV (HP) */}
         <div className="w-full space-y-1 mb-4">
           <div className="flex justify-between text-xs font-mono">
-            <span className="text-red-400 font-bold flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5 fill-red-500/20" /> POINTS DE VIE (HP)
+            <span className="text-red-400 font-bold flex items-center gap-1.5">
+              <RpgIcon iconType="hp" size="xs" className="w-5 h-5 shrink-0" /> POINTS DE VIE (HP)
             </span>
             <span className="text-slate-300">{character.hp} / {character.maxHp}</span>
           </div>
@@ -530,8 +530,8 @@ export function CharacterSheet({
         {/* Barre d'XP */}
         <div className="w-full space-y-1 mb-4">
           <div className="flex justify-between text-xs font-mono">
-            <span className="text-[#10b981] font-bold flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-[#10b981]/20" /> EXPÉRIENCE (XP)
+            <span className="text-[#10b981] font-bold flex items-center gap-1.5">
+              <RpgIcon iconType="xp" size="xs" className="w-5 h-5 shrink-0" /> EXPÉRIENCE (XP)
             </span>
             <span className="text-slate-300">{character.xp} / {xpNeeded}</span>
           </div>
@@ -548,12 +548,12 @@ export function CharacterSheet({
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 text-center">🛡️ Équipement</div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { key: 'head', label: 'Tête', item: equipment.find(e => e.isEquipped && e.slot === 'head'), icon: '🧢' },
-              { key: 'armor', label: 'Armure', item: equipment.find(e => e.isEquipped && e.slot === 'armor'), icon: '👕' },
-              { key: 'weapon', label: 'Arme', item: equipment.find(e => e.isEquipped && e.slot === 'weapon'), icon: '🗡️' },
-              { key: 'shield', label: 'Bouclier', item: equipment.find(e => e.isEquipped && e.slot === 'shield'), icon: '🛡️' },
-              { key: 'ring', label: 'Anneau', item: equipment.find(e => e.isEquipped && e.slot === 'ring'), icon: '💍' },
-              { key: 'boots', label: 'Bottes', item: equipment.find(e => e.isEquipped && e.slot === 'boots'), icon: '🥾' },
+              { key: 'head', label: 'Tête', item: equipment.find(e => e.isEquipped && e.slot === 'head') },
+              { key: 'armor', label: 'Armure', item: equipment.find(e => e.isEquipped && e.slot === 'armor') },
+              { key: 'weapon', label: 'Arme', item: equipment.find(e => e.isEquipped && e.slot === 'weapon') },
+              { key: 'shield', label: 'Bouclier', item: equipment.find(e => e.isEquipped && e.slot === 'shield') },
+              { key: 'ring', label: 'Anneau', item: equipment.find(e => e.isEquipped && e.slot === 'ring') },
+              { key: 'boots', label: 'Bottes', item: equipment.find(e => e.isEquipped && e.slot === 'boots') },
             ].map((slot) => {
               const item = slot.item;
               return (
@@ -570,7 +570,7 @@ export function CharacterSheet({
                   }`}
                   title={item ? `${item.name} (${item.rarity.toUpperCase()})` : `Vide (${slot.label})`}
                 >
-                  <span className="text-xl mb-0.5">{item ? item.icon : slot.icon}</span>
+                  <RpgIcon iconType={item ? item.icon : slot.key} size="md" className="w-12 h-12 mb-1" rarity={item?.rarity} />
                   <span className="text-[8px] font-mono uppercase tracking-wider block overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
                     {item ? item.name : slot.label}
                   </span>
@@ -587,8 +587,8 @@ export function CharacterSheet({
             <div className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Quêtes</div>
           </div>
           <div className="text-center border-x border-[#1a1a1a]">
-            <div className="text-lg font-bold font-mono text-amber-400 flex items-center justify-center gap-0.5">
-              <span>🪙</span>{character.gold}
+            <div className="text-lg font-bold font-mono text-amber-400 flex items-center justify-center gap-1.5">
+              <RpgIcon iconType="gold" size="xs" className="w-5 h-5" />{character.gold}
             </div>
             <div className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Or actuel</div>
           </div>
@@ -601,8 +601,8 @@ export function CharacterSheet({
         {/* Suivi des Métriques Physiques */}
         <div className="w-full border-t border-[#1a1a1a] pt-4 mt-4 space-y-3">
           <div className="flex justify-between items-center">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-display flex items-center gap-1">
-              ⚖️ Mensurations
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-display flex items-center gap-1.5">
+              <RpgIcon iconType="mensurations" size="xs" className="w-5 h-5" /> Mensurations
             </h3>
             <button
               id="edit-metrics-btn"
@@ -771,127 +771,137 @@ export function CharacterSheet({
             <div className="flex-1 w-full space-y-2.5">
               
               {/* Vitalité */}
-              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a] rounded-xl p-2.5">
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="text-red-400 font-bold flex items-center gap-1.5">
-                    <Heart className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                    <span>Vitalité</span>
-                  </span>
-                  <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                    <span>{totalVitality} pts</span>
-                    {getRaceBonus('vitality') > 0 && (
-                      <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('vitality')}🧬</span>
-                    )}
-                    {getStatBonus('vitality') > 0 && (
-                      <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('vitality')}🛡️</span>
-                    )}
-                  </div>
+              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a]/60 rounded-xl p-3 flex items-center gap-3">
+                <div className="p-1 bg-[#0c0c0e]/80 rounded-xl border border-red-500/20 shadow-inner shrink-0">
+                  <RpgIcon iconType="vitality" size="sm" className="w-10 h-10" />
                 </div>
-                <div className="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#27272a]/20">
-                  <div 
-                    className="bg-red-500 h-full rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(100, (totalVitality / maxStatVal) * 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-red-400 font-extrabold uppercase tracking-wide">Vitalité</span>
+                    <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
+                      <span>{totalVitality} pts</span>
+                      {getRaceBonus('vitality') > 0 && (
+                        <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('vitality')}🧬</span>
+                      )}
+                      {getStatBonus('vitality') > 0 && (
+                        <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('vitality')}🛡️</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#27272a]/20">
+                    <div 
+                      className="bg-gradient-to-r from-red-600 to-rose-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, (totalVitality / maxStatVal) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Sagesse */}
-              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a] rounded-xl p-2.5">
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="text-blue-400 font-bold flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span>Sagesse</span>
-                  </span>
-                  <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                    <span>{totalWisdom} pts</span>
-                    {getRaceBonus('wisdom') > 0 && (
-                      <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('wisdom')}🧬</span>
-                    )}
-                    {getStatBonus('wisdom') > 0 && (
-                      <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('wisdom')}🛡️</span>
-                    )}
-                  </div>
+              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a]/60 rounded-xl p-3 flex items-center gap-3">
+                <div className="p-1 bg-[#0c0c0e]/80 rounded-xl border border-blue-500/20 shadow-inner shrink-0">
+                  <RpgIcon iconType="wisdom" size="sm" className="w-10 h-10" />
                 </div>
-                <div className="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#27272a]/20">
-                  <div 
-                    className="bg-blue-500 h-full rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(100, (totalWisdom / maxStatVal) * 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-blue-400 font-extrabold uppercase tracking-wide">Sagesse</span>
+                    <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
+                      <span>{totalWisdom} pts</span>
+                      {getRaceBonus('wisdom') > 0 && (
+                        <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('wisdom')}🧬</span>
+                      )}
+                      {getStatBonus('wisdom') > 0 && (
+                        <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('wisdom')}🛡️</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#27272a]/20">
+                    <div 
+                      className="bg-gradient-to-r from-blue-600 to-cyan-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, (totalWisdom / maxStatVal) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Force */}
-              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a] rounded-xl p-2.5">
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="text-orange-400 font-bold flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                    <span>Force</span>
-                  </span>
-                  <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                    <span>{totalStrength} pts</span>
-                    {getRaceBonus('strength') > 0 && (
-                      <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('strength')}🧬</span>
-                    )}
-                    {getStatBonus('strength') > 0 && (
-                      <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('strength')}🛡️</span>
-                    )}
-                  </div>
+              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a]/60 rounded-xl p-3 flex items-center gap-3">
+                <div className="p-1 bg-[#0c0c0e]/80 rounded-xl border border-orange-500/20 shadow-inner shrink-0">
+                  <RpgIcon iconType="strength" size="sm" className="w-10 h-10" />
                 </div>
-                <div className="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#27272a]/20">
-                  <div 
-                    className="bg-orange-500 h-full rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(100, (totalStrength / maxStatVal) * 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-orange-400 font-extrabold uppercase tracking-wide">Force</span>
+                    <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
+                      <span>{totalStrength} pts</span>
+                      {getRaceBonus('strength') > 0 && (
+                        <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('strength')}🧬</span>
+                      )}
+                      {getStatBonus('strength') > 0 && (
+                        <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('strength')}🛡️</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#27272a]/20">
+                    <div 
+                      className="bg-gradient-to-r from-orange-600 to-amber-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, (totalStrength / maxStatVal) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Sérénité */}
-              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a] rounded-xl p-2.5">
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="text-teal-400 font-bold flex items-center gap-1.5">
-                    <Compass className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-                    <span>Sérénité</span>
-                  </span>
-                  <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                    <span>{totalSerenity} pts</span>
-                    {getRaceBonus('serenity') > 0 && (
-                      <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('serenity')}🧬</span>
-                    )}
-                    {getStatBonus('serenity') > 0 && (
-                      <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('serenity')}🛡️</span>
-                    )}
-                  </div>
+              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a]/60 rounded-xl p-3 flex items-center gap-3">
+                <div className="p-1 bg-[#0c0c0e]/80 rounded-xl border border-teal-500/20 shadow-inner shrink-0">
+                  <RpgIcon iconType="serenity" size="sm" className="w-10 h-10" />
                 </div>
-                <div className="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#27272a]/20">
-                  <div 
-                    className="bg-teal-500 h-full rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(100, (totalSerenity / maxStatVal) * 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-teal-400 font-extrabold uppercase tracking-wide">Sérénité</span>
+                    <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
+                      <span>{totalSerenity} pts</span>
+                      {getRaceBonus('serenity') > 0 && (
+                        <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('serenity')}🧬</span>
+                      )}
+                      {getStatBonus('serenity') > 0 && (
+                        <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('serenity')}🛡️</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#27272a]/20">
+                    <div 
+                      className="bg-gradient-to-r from-teal-600 to-emerald-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, (totalSerenity / maxStatVal) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Magie */}
-              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a] rounded-xl p-2.5">
-                <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="text-purple-400 font-bold flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                    <span>Magie</span>
-                  </span>
-                  <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                    <span>{totalMagic} pts</span>
-                    {getRaceBonus('magic') > 0 && (
-                      <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('magic')}🧬</span>
-                    )}
-                    {getStatBonus('magic') > 0 && (
-                      <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('magic')}🛡️</span>
-                    )}
-                  </div>
+              <div className="bg-[#0c0c0e]/40 border border-[#1a1a1a]/60 rounded-xl p-3 flex items-center gap-3">
+                <div className="p-1 bg-[#0c0c0e]/80 rounded-xl border border-purple-500/20 shadow-inner shrink-0">
+                  <RpgIcon iconType="magic" size="sm" className="w-10 h-10" />
                 </div>
-                <div className="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#27272a]/20">
-                  <div 
-                    className="bg-purple-500 h-full rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min(100, (totalMagic / maxStatVal) * 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-purple-400 font-extrabold uppercase tracking-wide">Magie</span>
+                    <div className="font-mono font-bold text-slate-200 flex items-center gap-1">
+                      <span>{totalMagic} pts</span>
+                      {getRaceBonus('magic') > 0 && (
+                        <span className="text-[#10b981] text-[8px] px-1 bg-[#10b981]/10 rounded border border-[#10b981]/15" title="Bonus Race">+{getRaceBonus('magic')}🧬</span>
+                      )}
+                      {getStatBonus('magic') > 0 && (
+                        <span className="text-green-400 text-[8px] px-1 bg-green-950/20 rounded border border-green-900/15" title="Bonus Équipement">+{getStatBonus('magic')}🛡️</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#27272a]/20">
+                    <div 
+                      className="bg-gradient-to-r from-purple-600 to-fuchsia-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, (totalMagic / maxStatVal) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -903,8 +913,8 @@ export function CharacterSheet({
         <div className="bg-[#111113] border border-[#1a1a1a] rounded-2xl p-5 relative overflow-hidden">
           {/* Section Header */}
           <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-3 mb-4">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-[#10b981]" />
+            <div className="flex items-center gap-1.5">
+              <RpgIcon iconType="evolution" size="xs" className="w-6 h-6" />
               <h3 className="text-sm font-semibold text-slate-200 tracking-wider font-display uppercase">Évolution</h3>
             </div>
             <div className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
@@ -913,23 +923,23 @@ export function CharacterSheet({
           </div>
 
           {/* Current Active Form Showcase */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-gradient-to-r from-[#0c0c0e] to-[#111113] border border-[#1a1a1a]/60 rounded-xl p-4 mb-5">
-            <div className="md:col-span-3 flex flex-col items-center justify-center text-center">
-              <span className="text-5xl mb-2 filter drop-shadow-[0_4px_8px_rgba(16,185,129,0.3)] animate-bounce-slow">
-                {currentEvolution.emoji}
-              </span>
-              <span className="text-[9px] font-mono font-bold tracking-wider uppercase text-slate-500">Forme Active</span>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center bg-gradient-to-r from-[#0c0c0e] to-[#111113] border border-[#1a1a1a]/60 rounded-xl p-5 mb-5">
+            <div className="md:col-span-4 flex flex-col items-center justify-center text-center p-3 md:border-r border-[#1a1a1a]/40">
+              <div className="mb-2 filter drop-shadow-[0_8px_24px_rgba(16,185,129,0.35)] transition-all hover:scale-110 duration-300">
+                <EvolutionFluteIcon tier={currentEvolution.tier} size="xl" className="w-28 h-28 md:w-32 md:h-32" />
+              </div>
+              <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-emerald-400 mt-1">Forme Active</span>
             </div>
-            <div className="md:col-span-9 space-y-1.5 text-center md:text-left">
-              <h4 className="text-md font-bold text-[#10b981] font-display flex items-center justify-center md:justify-start gap-1.5">
+            <div className="md:col-span-8 space-y-2.5 text-center md:text-left">
+              <h4 className="text-lg font-bold text-emerald-400 font-display flex items-center justify-center md:justify-start gap-2">
                 <span>{currentEvolution.title}</span>
-                <span className="text-xs font-mono text-slate-400">(Dès le Niveau {currentEvolution.minLevel})</span>
+                <span className="text-xs font-mono text-slate-500 font-normal">(Dès le Niveau {currentEvolution.minLevel})</span>
               </h4>
-              <p className="text-xs text-slate-400 italic font-sans leading-relaxed">
+              <p className="text-sm text-slate-300 italic font-sans leading-relaxed">
                 "{currentEvolution.description}"
               </p>
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/20 border border-emerald-900/30 text-emerald-400 text-[10px] font-mono font-bold">
-                <Award className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-950/20 border border-emerald-900/40 text-emerald-300 text-xs font-mono font-bold">
+                <Award className="w-4 h-4 text-emerald-400" />
                 Bonus de Palier : {currentEvolution.bonus}
               </div>
             </div>
@@ -957,14 +967,14 @@ export function CharacterSheet({
                   >
                     {/* Status icon / number */}
                     <div className="relative shrink-0 flex items-center justify-center">
-                      <div className={`w-9 h-9 rounded-full border flex items-center justify-center text-lg ${
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-300 overflow-hidden ${
                         isActive
-                          ? 'border-[#10b981] bg-[#10b981]/10 text-white font-bold'
+                          ? 'border-[#10b981] bg-[#10b981]/15 shadow-[0_0_12px_rgba(16,185,129,0.25)] scale-105'
                           : isUnlocked
-                            ? 'border-slate-700 bg-[#111113] text-slate-300'
-                            : 'border-[#1a1a1a] bg-[#111113]/30 text-slate-600'
+                            ? 'border-slate-700 bg-[#111113]'
+                            : 'border-[#1a1a1a] bg-[#111113]/30 grayscale opacity-45'
                       }`}>
-                        {ev.emoji}
+                        <EvolutionFluteIcon tier={ev.tier} size="sm" className="w-8 h-8" />
                       </div>
                       
                       {/* Badge indicator on the circle corner */}

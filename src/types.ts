@@ -139,3 +139,34 @@ export interface EquipmentItem {
 
 export type JournalEntries = Record<string, string>;
 
+export interface KeyboardShortcuts {
+  navCharacter: string;
+  navQuests: string;
+  navSkills: string;
+  navInventory: string;
+  navShop: string;
+  navGrimoire: string;
+  navAnalytics: string;
+  toggleSound: string;
+}
+
+export interface CharacterProfile {
+  id: string;
+  createdAt: number;
+  lastActiveAt: number;
+  character: Character;
+  quests: Quest[];
+  rewards: Reward[];
+  achievements: Achievement[];
+  skills: SkillNode[];
+  equipment: EquipmentItem[];
+  activeTimers: ActiveTimer[];
+  journalEntries: JournalEntries;
+  history: {
+    questsCompletedCount: number;
+    dailiesCompletedCount: number;
+    totalGoldEarned: number;
+  };
+}
+
+
